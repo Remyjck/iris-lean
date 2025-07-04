@@ -125,7 +125,7 @@ instance : BI (AProp M) where
   later_sForall_2 {Ψ} := by sorry
   later_sExists_false {Ψ} := by sorry
   later_sep {p q} := by sorry
-  later_persistently {p q} := by sorry
+  later_persistently {p} := by sorry
   later_false_em {p} := by sorry
 
 instance : BILaterContractive (AProp M) where
