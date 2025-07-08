@@ -46,27 +46,34 @@ def cif_cdom FF [Iris.IsGFunctors FF] (s : cif_sel FF) : Type :=
   | .cifs_inv fml => cif_cdom FF fml
   | @cif_sel.cifs_own _ _ _ _ _ => Empty
 
+def cif_data FF [Iris.IsGFunctors FF] (s : cif_sel FF) : Type :=
+  match s with
+  | .cifs_pure => Prop
+  | .cifs_later => (Iris.IProp FF)
+  | _ => Empty
+
 section noliris
 variable (FF : Iris.GFunctors) [Iris.IsGFunctors FF]
 
 open Iris.BI
 
-def cif_bsem s : (cif_idom FF s -> Iris.IProp FF) -> Iris.IProp FF :=
+def cif_bsem s : (cif_idom FF s -> Iris.IProp FF) -> (cif_data FF s) -> Iris.IProp FF :=
   match s with
-  | .cifs_all A => λ Φ => iprop(∀ (a : A), Φ a)
-  | .cifs_ex A => λ Φ => iprop(∃ (a : A), Φ a)
-  | .cifs_bin s => λ Φ =>
+  | .cifs_all A => λ Φ _ => iprop(∀ (a : A), Φ a)
+  | .cifs_ex A => λ Φ _ => iprop(∃ (a : A), Φ a)
+  | .cifs_bin s => λ Φ _ =>
     (match s with
     | .cifs_and => iprop(Φ true ∧ Φ false) | .cifs_or => iprop(Φ true ∨ Φ false)
     | .cifs_imp => iprop(Φ true -> Φ false) | .cifs_wand => iprop(Φ true -∗ Φ false)
     | .cifs_sep => iprop(Φ true ∗ Φ false))
-  | .cifs_un s => λ Φ =>
+  | .cifs_un s => λ Φ _ =>
     (match s with
     | .cifs_plain => iprop(■ Φ ()) | .cifs_pers => iprop(□ Φ ())
     | .cifs_bupd => iprop(|==> Φ ())
     | .cifs_except0 => iprop(◇ Φ ()))
-  | .cifs_pure => λ _ => by sorry | .cifs_later => λ _ => by sorry
+  | .cifs_pure => λ _ φ => iprop(⌜φ⌝)
+  | .cifs_later => λ _ Φ => iprop(▷ Φ)
   | .cifs_inv _ => λ _ => by sorry
-  | @cif_sel.cifs_own _ _ M ⟨ γ, Hlookup ⟩ m => λ _ => /- UPred.ownM m -/ by sorry
+  | @cif_sel.cifs_own _ _ M ⟨ γ, Hlookup ⟩ m => /- λ _ _ =>  UPred.ownM m -/ by sorry
 
 end noliris
