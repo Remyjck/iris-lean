@@ -3,6 +3,10 @@ srcDir = "./src/"
 defaultTargets = ["Iris", "IrisTest"]
 
 [[require]]
+name = "aeneas"
+path = "../aeneas/backends/lean/"
+
+[[require]]
 name = "Qq"
 scope = "leanprover-community"
 version = "git#stable"

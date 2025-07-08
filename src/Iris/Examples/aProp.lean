@@ -63,5 +63,7 @@ example : AgreeString "I <3 iris-lean!" ⊢ (AgreeString "I don't :<" -∗ False
   apply ownM_always_invalid_elim -- The resource is invalid
   apply MyR_always_invalid; simp       -- Simplify
 
+
+
 end const_agree
 end Iris.Examples
