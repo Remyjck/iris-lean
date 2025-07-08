@@ -522,6 +522,24 @@ class OFunctor (F : OFunctorPre) where
     (f : α₂ -n> α₁) (g : α₃ -n> α₂) (f' : β₁ -n> β₂) (g' : β₂ -n> β₃) (x : F α₁ β₁) :
     map (f.comp g) (g'.comp f') x ≡ map g g' (map f f' x)
 
+class oFunctor where
+  -- EXPERIMENT: Replacing COFE in this definition with OFE
+  -- https://leanprover.zulipchat.com/#narrow/channel/490604-iris-lean/topic/OFunctor.20definition
+  -- cofe [COFE α] [COFE β] : OFE (F α β)
+  F : OFunctorPre
+  cofe [OFE α] [OFE β] : OFE (F α β)
+  map [OFE α₁] [OFE α₂] [OFE β₁] [OFE β₂] :
+    (α₂ -n> α₁) → (β₁ -n> β₂) → F α₁ β₁ -n> F α₂ β₂
+  map_ne [OFE α₁] [OFE α₂] [OFE β₁] [OFE β₂] :
+    NonExpansive₂ (@map α₁ α₂ β₁ β₂ _ _ _ _)
+  map_id [OFE α] [OFE β] (x : F α β) : map (@Hom.id α _) (@Hom.id β _) x ≡ x
+  map_comp [OFE α₁] [OFE α₂] [OFE α₃] [OFE β₁] [OFE β₂] [OFE β₃]
+    (f : α₂ -n> α₁) (g : α₃ -n> α₂) (f' : β₁ -n> β₂) (g' : β₂ -n> β₃) (x : F α₁ β₁) :
+    map (f.comp g) (g'.comp f') x ≡ map g g' (map f f' x)
+
+def bundleOF (OF : OFunctor F) : oFunctor :=
+  ⟨ F, OF.cofe, OF.map, OF.map_ne, OF.map_id, OF.map_comp ⟩
+
 class OFunctorContractive (F : OFunctorPre) extends OFunctor F where
   map_contractive [OFE α₁] [OFE α₂] [OFE β₁] [OFE β₂] :
     Contractive (Function.uncurry (@map α₁ α₂ β₁ β₂ _ _ _ _))
@@ -530,7 +548,7 @@ attribute [instance] OFunctor.cofe
 
 abbrev constOF (B : Type) : OFunctorPre := fun _ _ _ _ => B
 
-instance oFunctorConstOF [OFE B] : OFunctor (constOF B) where
+instance OFunctorConstOF [OFE B] : OFunctor (constOF B) where
   cofe := _
   map _ _ := ⟨id, id_ne⟩
   map_ne := by intros; constructor; simp [NonExpansive₂]
@@ -539,6 +557,15 @@ instance oFunctorConstOF [OFE B] : OFunctor (constOF B) where
 
 instance OFunctor.constOF_contractive [OFE B] : OFunctorContractive (constOF B) where
   map_contractive.1 := by simp [map]
+
+abbrev idOF : OFunctorPre := fun _ B _ _ => B
+
+instance OFunctorIdOF : OFunctor idOF where
+  cofe := _
+  map {_ _ _ _ _ _ _ _ _ f} := f
+  map_ne := by intros; constructor; simp only [imp_self, implies_true]
+  map_id := by simp only [Hom.id_apply, Equiv.rfl, implies_true]
+  map_comp := by simp only [Hom.comp_apply, Equiv.rfl, implies_true]
 
 end COFE
 
@@ -578,6 +605,17 @@ instance oFunctor_discreteFunOF {C} (F : C → OFunctorPre) [∀ c, OFunctor (F 
   map_comp _ _ _ _ _ _ := by apply OFunctor.map_comp
 
 end DiscreteFunOF
+
+section prop
+
+instance isEquivalenceIff : Equivalence (λ P Q => P ↔ Q) := by
+  constructor <;> intros <;> simp [*]
+
+instance propO : OFE Prop := ofDiscrete (λ P Q => P ↔ Q) isEquivalenceIff
+
+abbrev propOF : COFE.OFunctorPre := λ _ _ _ _ => Prop
+
+end prop
 
 section Option
 variable [OFE α]
@@ -731,6 +769,23 @@ theorem OFE.ContractiveHom.fixpoint_ind [COFE α] [Inhabited α] (f : α -c> α)
     | succ _ IH => apply Hind (Nat.repeat f.f _ x) IH
 
 end Fixpoint
+
+section Unit
+
+instance unitO : OFE Unit where
+  Equiv x y := True
+  Dist n x y := True
+  dist_eqv {_} := by constructor <;> simp only [imp_self, implies_true]
+  equiv_dist := by simp only [implies_true]
+  dist_lt := by simp only [implies_true]
+
+abbrev unitOF : COFE.OFunctorPre := λ _ _ _ _ => Unit
+
+instance isCOFE_unit : COFE Unit where
+  compl c := ()
+  conv_compl := by simp only [Dist.rfl, implies_true]
+
+end Unit
 
 section Later
 
