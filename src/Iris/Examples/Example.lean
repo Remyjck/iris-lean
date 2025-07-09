@@ -659,12 +659,12 @@ theorem incr_eq.spec (x : U32) (hv : x.val < U32.max) :
   xprogress
   . apply (x.val + 1)#u32
   . simp [write, read, eq_or_disj]
-    iintro ⟨ x1, h0, h1 ⟩ -- TODO: this doesn't work: iintro ⟨ x1, %h0, h1 ⟩
-    sorry -- TODO:
+    iintro ⟨ x1, h0, h1 ⟩ -- TODO: we have to remove evars from the goal in order to introduce ⟨ %h0, h1 ⟩
+    isplit l; ipure h0; simp [h0]
+    iemp_intro
   . isplit
     . iintro _; iemp_intro
     . simp
-  . sorry
 
 theorem incr_disj.spec (x y : U32) (hv : x.val < U32.max) :
   ⊢ (incr_disj x y) {{ fun (_, y') => y'.val = x.val + 1 }} := by
