@@ -35,16 +35,10 @@ def cif_idom FF [Iris.IsGFunctors FF] (s : cif_sel FF) : Type :=
   | .cifs_all A | .cifs_ex A => A
   | .cifs_bin _ => Bool
   | .cifs_un _ => Unit
-  | .cifs_pure | .cifs_later => Empty
+  | .cifs_pure => Empty
+  | .cifs_later => Unit
   | .cifs_inv fml => cif_idom FF fml
-  | @cif_sel.cifs_own _ _ M _ _ => Iris.COFE.OFunctor M
-
-def cif_cdom FF [Iris.IsGFunctors FF] (s : cif_sel FF) : Type :=
-  match s with
-  | .cifs_all _ | .cifs_ex _ | .cifs_bin _ | .cifs_un _ | .cifs_pure | .cifs_later =>
-    Empty
-  | .cifs_inv fml => cif_cdom FF fml
-  | @cif_sel.cifs_own _ _ _ _ _ => Empty
+  | .cifs_own _ _ => Empty
 
 def cif_data FF [Iris.IsGFunctors FF] (s : cif_sel FF) : Type :=
   match s with
@@ -61,19 +55,23 @@ def cif_bsem s : (cif_idom FF s -> Iris.IProp FF) -> (cif_data FF s) -> Iris.IPr
   match s with
   | .cifs_all A => λ Φ _ => iprop(∀ (a : A), Φ a)
   | .cifs_ex A => λ Φ _ => iprop(∃ (a : A), Φ a)
-  | .cifs_bin s => λ Φ _ =>
+  | .cifs_bin s => λ Φ _ => let (P, Q) := (Φ true, Φ false);
     (match s with
-    | .cifs_and => iprop(Φ true ∧ Φ false) | .cifs_or => iprop(Φ true ∨ Φ false)
-    | .cifs_imp => iprop(Φ true -> Φ false) | .cifs_wand => iprop(Φ true -∗ Φ false)
-    | .cifs_sep => iprop(Φ true ∗ Φ false))
-  | .cifs_un s => λ Φ _ =>
+    | .cifs_and => iprop(P ∧ Q) | .cifs_or => iprop(P ∨ Q)
+    | .cifs_imp => iprop(P -> Q) | .cifs_wand => iprop(P -∗ Q)
+    | .cifs_sep => iprop(P ∗ Q))
+  | .cifs_un s => λ Φ _ => let P := Φ ();
     (match s with
-    | .cifs_plain => iprop(■ Φ ()) | .cifs_pers => iprop(□ Φ ())
-    | .cifs_bupd => iprop(|==> Φ ())
-    | .cifs_except0 => iprop(◇ Φ ()))
+    | .cifs_plain => iprop(■ P) | .cifs_pers => iprop(□ P)
+    | .cifs_bupd => iprop(|==> P)
+    | .cifs_except0 => iprop(◇ P))
   | .cifs_pure => λ _ φ => iprop(⌜φ⌝)
-  | .cifs_later => λ _ Φ => iprop(▷ Φ)
+  | .cifs_later => λ Φ _ => iprop(▷ Φ ())
   | .cifs_inv _ => λ _ => by sorry
-  | @cif_sel.cifs_own _ _ M ⟨ γ, Hlookup ⟩ m => /- λ _ _ =>  UPred.ownM m -/ by sorry
+  | @cif_sel.cifs_own _ _ M Hlookup m => /- UPred.ownM m -/ by
+    intros _ _
+    apply (@UPred.ownM (Iris.IResUR FF) _); simp [Iris.IResUR]
+    sorry
+
 
 end noliris
