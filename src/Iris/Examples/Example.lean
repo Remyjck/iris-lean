@@ -556,19 +556,19 @@ def read (b : EqOrDisj α) : α :=
 noncomputable def eq_or_disj {α β} [Coe α β] (xp yp : RawPtr α) (v : EqOrDisj β)
   : aProp FF0 :=
   match v with
-  | .Eq x => iprop(∃ (xv : α), ⌜yp = xp⌝ ∗ ⌜x = xv⌝ ∗ (xp ↦ xv))
-  | .Disj x y => iprop(∃ (xv yv : α), ⌜x = xv⌝ ∗ ⌜y = yv⌝ ∗ (xp ↦ xv) ∗ (yp ↦ yv))
+  | .Eq x => iprop(∃ (xv : α), ⌜yp = xp⌝ ∗ ⌜x = ↑xv⌝ ∗ (xp ↦ xv))
+  | .Disj x y => iprop(∃ (xv yv : α), ⌜x = xv⌝ ∗ ⌜y = ↑yv⌝ ∗ (xp ↦ xv) ∗ (yp ↦ yv))
 
 theorem read_ptr.spec' {α β} [Coe α β] {v : EqOrDisj β} {xp yp : RawPtr α} :
   ⊢ ⦃ eq_or_disj xp yp v ⦄ (read_ptr xp) ⦃ fun _ => eq_or_disj xp yp v ⦄ {{ fun x => x = read v }} := by
   simp [eq_or_disj]
-  cases v with | Eq x | Disj x y
-  . xsimp; rename_i xv h0 h1
-    xprogress
-    isplit
-    . iintro H; iexists xv; simp
-    . simp [read]
-  . xsimp; rename_i xv yv h0 h1
+  cases v with
+  | Eq x =>
+    xsimp; rename_i xv h0 h1
+    xprogress; simp [read]
+    iintro H; iexists xv; simp
+  | Disj x y =>
+    xsimp; rename_i xv yv h0 h1
     xprogress
     isplit
     . iintro H; iexists xv; iexists yv; simp
@@ -577,11 +577,13 @@ theorem read_ptr.spec' {α β} [Coe α β] {v : EqOrDisj β} {xp yp : RawPtr α}
 theorem write_ptr.spec' {α β} [Coe α β] {v : EqOrDisj β} {v' : α} {xp yp : RawPtr α} :
   ⊢ ⦃ eq_or_disj xp yp v ⦄ (write_ptr yp v') ⦃ fun _ => eq_or_disj xp yp (write v v') ⦄ {{ fun () => True }} := by
   simp [eq_or_disj]
-  cases v with | Eq x | Disj x y
-  . xsimp; rename_i xv h0 h1
+  cases v with
+  | Eq x =>
+    xsimp; rename_i xv h0 h1
     xprogress; simp [write]
     iintro H; iexists v'; simp
-  · xsimp; rename_i xv yv h0 h1
+  | Disj x y =>
+    xsimp; rename_i xv yv h0 h1
     xprogress
     simp [write]
     iintro H; iexists xv; iexists v'; simp
