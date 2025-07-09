@@ -177,7 +177,7 @@ def run {α} (fuel : ℕ) (x : ITree α) : Result (α) :=
   | .Act _ _ => sorry
 
 /- For total correctness: -/
-def post {α} (hp0 : aProp FF0) (x : ITree α) (hp1 : α → aProp FF0) (p : α → Prop) : aProp FF0 :=
+@[irreducible] def post {α} (hp0 : aProp FF0) (x : ITree α) (hp1 : α → aProp FF0) (p : α → Prop) : aProp FF0 :=
   iprop(hp0 -∗
   ((∃ n res, ⌜run n x = .ok (res)⌝) ∗
   (∀ n res, ⌜run n x = .ok (res)⌝ -∗
@@ -238,7 +238,7 @@ open Lean.PrettyPrinter in
 @[app_unexpander ptr]
 def unexpPtr : Unexpander | `($_ $x $y) => `($x ↦ $y) | _ => throw ()
 
-example (x y : RawPtr ℕ) (xv yv : ℕ) : aProp FF0 := iprop((x ↦ xv) ∗ (y ↦ yv))
+noncomputable example (x y : RawPtr ℕ) (xv yv : ℕ) : aProp FF0 := iprop((x ↦ xv) ∗ (y ↦ yv))
 
 /- fn mut_to_raw<'a, T>(x : &'a mut T) -> *T -/
 axiom mut_to_raw {α} (x : α) : ITree (RawPtr α)
@@ -259,7 +259,7 @@ theorem post_bind {α β : Type} {F : aProp FF0} {x : ITree α}
 theorem post_ret {x : ITree α} {p0 p0' : aProp FF0} {p1' : α → aProp FF0} {pp : α → Prop} {p1 : α → aProp FF0}
   {pf : α → Prop}
   (h0 : ⊢ post p0' x p1' pp)
-  (h1 : p0 ⊢ (p0' ∗ F))
+  (h1 : ⊢ p0 -∗ (p0' ∗ F))
   (h2 : ∀ z, (pp z → ⊢ (((p1' z) ∗ F) -∗ (p1 z)) ∗ ⌜pf z⌝)) :
   ⊢ post p0 x p1 pf := by
   sorry
@@ -296,15 +296,15 @@ syntax "xlookup" : tactic
 syntax "xdischarge" : tactic
 syntax "xframe" : tactic
 
-syntax "xprogress" "with" ident : tactic
+syntax "xprogress" "with" term : tactic
 
 macro_rules
 | `(tactic| xprogress) =>
-  `(tactic| (first | apply post_bind | apply post_ret) <;> (try xlookup) <;> (try xdischarge) <;> (try xframe) <;> simp -failIfUnchanged)
+  `(tactic| (first | apply post_bind | apply post_ret) <;> (try xlookup) <;> (try xdischarge) <;> (try xframe) <;> (try xdischarge) <;> simp -failIfUnchanged)
 
 macro_rules
 | `(tactic| xprogress with $x) =>
-  `(tactic| (first | apply post_bind | apply post_ret) <;> (try apply $x) <;> (try xdischarge) <;> (try xframe) <;> simp -failIfUnchanged)
+  `(tactic| (first | apply post_bind | apply post_ret) <;> (try apply $x) <;> (try xdischarge) <;> (try xframe) <;> (try xdischarge) <;> simp -failIfUnchanged)
 
 macro_rules
 | `(tactic| xlookup) =>
@@ -314,16 +314,38 @@ macro_rules
 | `(tactic| xdischarge) =>
   `(tactic| scalar_tac)
 
+@[simp] theorem emp_sep (H : aProp FF0) : iprop(emp ∗ H) = H := by sorry
+@[simp] theorem sep_emp (H : aProp FF0) : iprop(H ∗ emp) = H := by sorry
+
+@[simp] theorem entails_wand_self (H : aProp FF0) : ⊢ H -∗ H := by sorry
+
+-- TODO: are those true? Probably not with Leibnitz' equality
+@[simp] theorem wand_self (H : aProp FF0) : iprop(H -∗ H) = iprop(emp) := by sorry
+@[simp] theorem pure_true : iprop(⌜True⌝) = iprop(emp : aProp FF0) := by sorry
+
+@[simp] theorem entails_wand_self_sep (H : aProp FF0) : ⊢ H -∗ H ∗ emp := by sorry
+@[simp] theorem entails_wand_sep (H Q1 Q2 : aProp FF0) : (⊢ Q1 -∗ Q2) → (⊢ H ∗ Q1 -∗ H ∗ Q2) := by sorry
+@[simp] theorem entails_wand_sep_swapped (H Q1 Q2 : aProp FF0) : (⊢ Q1 -∗ Q2) → (⊢ Q1 ∗ H -∗ H ∗ Q2) := by sorry
+
+@[simp] theorem sep_entails_sep_swapped (H Q : aProp FF0) : H ∗ Q ⊢ Q ∗ H := by sorry
+
 macro_rules
 | `(tactic| xframe) =>
   `(tactic|
     (try simp) <;>
-    (first | apply ptr_sep_entail_ptr_sep
+    repeat
+      first | apply entails_wand_self
+            | apply entails_wand_self_sep
+            | apply entails_wand_sep
+            | apply entails_wand_sep_swapped
+            | apply sep_entails_sep_swapped
+    /-(first | apply ptr_sep_entail_ptr_sep
            | apply entail_emp
            | apply p_entail_empty_sep_p
            | apply p_entail_p_sep_empty
            | apply ptr_entail_ptr_emp
-           | apply ptr_sep_ptr_entail_sym))
+           | apply ptr_sep_ptr_entail_sym)-/
+           )
 
 axiom or_post {p0 p1 : aProp FF0} {p : α → aProp FF0} {pp : α → Prop}
   (h0 : ⊢ ⦃ p0 ⦄ x ⦃ p ⦄ {{ pp }})
@@ -409,12 +431,14 @@ def incr_ptr (p : RawPtr U32) : ITree Unit := do
 
 /-! # Verification of Pure Functions -/
 
+-- TODO: how to switch to a pure goal?
+@[simp] theorem entails_pure (P : Prop) : (⊢ @BI.pure (aProp FF0) _ P) ↔ P := by sorry
+
 theorem mul2_add1.spec (x : U32) (h : 2 * x.val + 1 ≤ U32.max) :
   ⊢ pure_post (mul2_add1 x) (fun y => y.val = 2 * x.val + 1) := by
-  unfold mul2_add1;
-  apply pure_post_bind; apply UScalar.add_spec; scalar_tac
-  intros i hi; apply entail_pure_post; apply UScalar.add_spec; scalar_tac
-  intros i' hi'; scalar_tac
+  unfold mul2_add1
+  xprogress with UScalar.add_spec; intros i hi
+  xprogress with UScalar.add_spec
 
 /-! # Verification of an unsafe function -/
 
@@ -424,17 +448,12 @@ def incr_ptr.spec (p : RawPtr U32) (x : U32) (h : x.val < U32.max) :
   ⦃ fun _ => iprop(∃ x', ⌜x'.val = x.val + 1⌝ ∗ p ↦ x') ⦄ {{ fun () => True }}
   := by
   unfold incr_ptr
-  apply (@post_bind _ _ _); apply read_ptr.spec; apply x
-  iintro Hp; isplit l [Hp]; iexact Hp; iemp_intro
-  intros x1 hx1; apply (@post_bind _ _ (p ↦ x)); apply UScalar.add_spec; scalar_tac
-  iintro ⟨Hp, _⟩; isplit r [Hp]; iemp_intro; iexact Hp
-  intros x2 hx2; apply (@post_ret _ emp); apply write_ptr.spec; apply x
-  iintro ⟨_, Hp⟩; isplit l [Hp] <;> simp
-  intros _ _; isplit
-  · iintro ⟨Hp, _⟩; iexists x2; isplit r
-    · ipure_intro; simp_all
-    · iexact Hp
-  · ipure_intro; simp
+  xprogress
+  xprogress; intros x0 hx0
+  xprogress
+  -- TODO:
+  iintro H
+  iexists x0; simp [*]
 
 /-
 # Conversion from mutable borrow to raw pointer
@@ -467,12 +486,12 @@ def incr_borrow (x : U32) : ITree U32 := do
 theorem incr_borrow.spec (x : U32) (hx : x.val < U32.max) :
   ⊢ (incr_borrow x) {{ fun y => y.val = x.val + 1 }} := by
   unfold incr_borrow
-  apply (@post_bind _ _ emp); apply mut_to_raw.spec; iintro _; isplit <;> iemp_intro
-  intros p _; apply (@post_bind _ _ emp); apply read_ptr.spec; apply x; iintro H; iexact H
-  intros x1 h1; apply (@post_bind _ _ (p ↦ x)); apply UScalar.add_spec; scalar_tac; iintro ⟨Hp, _⟩; isplit r [Hp] <;> simp
-  intros x2 h2; apply (@post_bind _ _ emp); apply write_ptr.spec; apply x; iintro ⟨_, Hp⟩; isplit l [Hp] <;> simp
-  intros _ _; apply (@post_ret _ emp); apply end_mut_to_raw.spec; apply x2; iintro ⟨Hp, _⟩; isplit l [Hp] <;> simp
-  intros x3 h3; isplit; iintro _; iemp_intro; ipure_intro; scalar_tac
+  xprogress; intros xp
+  xprogress
+  xprogress; intros xv1 hxv1
+  xprogress
+  xprogress
+
 /-
 # Equal or disjoint
 
@@ -534,7 +553,6 @@ def read (b : EqOrDisj α) : α :=
   | .Eq x => x
   | .Disj x₁ _ => x₁
 
-#check Coe
 noncomputable def eq_or_disj {α β} [Coe α β] (xp yp : RawPtr α) (v : EqOrDisj β)
   : aProp FF0 :=
   match v with
@@ -545,77 +563,50 @@ theorem read_ptr.spec' {α β} [Coe α β] {v : EqOrDisj β} {xp yp : RawPtr α}
   ⊢ ⦃ eq_or_disj xp yp v ⦄ (read_ptr xp) ⦃ fun _ => eq_or_disj xp yp v ⦄ {{ fun x => x = read v }} := by
   simp [eq_or_disj]
   cases v with | Eq x | Disj x y
-  . xsimp
-    apply (@post_ret _ emp); apply read_ptr.spec; rename α => xv; apply xv
-    · iintro Hp; isplit l [Hp]; iassumption; iemp_intro
-    intros x1 hx1; isplit
-    · iintro ⟨_, Hp⟩; iexists x1; simp [hx1]
-      isplit; ipure_intro; constructor; isplit; ipure_intro; constructor; iassumption
-    · ipure_intro; simp [read, hx1]
-  · xsimp
-    rename α => yv; rename_i xv coe1 coe2
-    apply (@post_ret _ (yp ↦ yv)); apply read_ptr.spec; apply xv
-    · istart; iintro ⟨Hx, Hy⟩; isplit l [Hx] <;> iassumption
-    intros x1 hx1; isplit
-    · iintro ⟨Hx, Hy⟩; iexists xv; iexists yv; simp; isplit r
-      · ipure_intro; constructor
-      · isplit r; ipure_intro; constructor
-        isplit l [Hx] <;> iassumption
-    · ipure_intro; simp [read, hx1]
+  . xsimp; rename_i xv h0 h1
+    xprogress
+    isplit
+    . iintro H; iexists xv; simp
+    . simp [read]
+  . xsimp; rename_i xv yv h0 h1
+    xprogress
+    isplit
+    . iintro H; iexists xv; iexists yv; simp
+    . simp [read]
 
 theorem write_ptr.spec' {α β} [Coe α β] {v : EqOrDisj β} {v' : α} {xp yp : RawPtr α} :
   ⊢ ⦃ eq_or_disj xp yp v ⦄ (write_ptr yp v') ⦃ fun _ => eq_or_disj xp yp (write v v') ⦄ {{ fun () => True }} := by
   simp [eq_or_disj]
   cases v with | Eq x | Disj x y
-  . xsimp
-    apply (@post_ret _ emp); apply write_ptr.spec; rename α => xv; apply xv
-    · iintro Hp; isplit l [Hp]; iassumption; iemp_intro
-    intros x1 hx1; isplit
-    · iintro ⟨_, Hp⟩; simp [write]; iexists v'; simp [hx1]
-      isplit; ipure_intro; constructor; isplit; ipure_intro; constructor; iassumption
-    · ipure_intro; simp [read, hx1]
-  · xsimp
-    rename α => yv; rename_i xv coe1 coe2
-    apply (@post_ret _ (xp ↦ xv)); apply write_ptr.spec; apply yv
-    · istart; iintro ⟨Hx, Hy⟩; isplit r [Hx] <;> iassumption
-    intros x1 hx1; isplit
-    · iintro ⟨Hx, Hy⟩; simp [write]; iexists xv; iexists v'; simp; isplit r
-      · ipure_intro; constructor
-      · isplit r; ipure_intro; constructor
-        isplit r [Hx] <;> iassumption
-    · ipure_intro; simp [read, hx1]
+  . xsimp; rename_i xv h0 h1
+    xprogress; simp [write]
+    iintro H; iexists v'; simp
+  · xsimp; rename_i xv yv h0 h1
+    xprogress
+    simp [write]
+    iintro H; iexists xv; iexists v'; simp
+    -- TODO: irevert?
 
 theorem eq_entail_eq_or_disj {α β} [Coe α β] {v : α} {p : RawPtr α} :
   ⊢ (p ↦ v) -∗ @eq_or_disj α β _ p p (.Eq ↑v) := by
   iintro Hp
-  simp [eq_or_disj]; iexists v; simp;
-  isplit; ipure_intro; constructor; isplit; ipure_intro; constructor
-  iassumption
+  simp [eq_or_disj]; iexists v; simp
 
 theorem disj_entail_eq_or_disj {α β} [Coe α β] {xv yv : α} {xp yp : RawPtr α} :
   ⊢ ((xp ↦ xv) ∗ (yp ↦ yv)) -∗ @eq_or_disj α β _ xp yp (.Disj ↑xv ↑yv) := by
   iintro ⟨Hx, Hy⟩; simp [eq_or_disj]
   iexists xv; iexists yv; simp
-  isplit; ipure_intro; constructor; isplit; ipure_intro; constructor
-  isplit l [Hx] <;> iassumption
 
 theorem eq_or_disj_entail_eq {α β} [Coe α β] {xv : β} {xp : RawPtr α} :
   ⊢ (eq_or_disj xp xp (.Eq xv)) -∗ ∃ (xv' : α), ⌜↑xv' = xv⌝ ∗ (xp ↦ xv') := by
   simp [eq_or_disj]
-  iintro ⟨ xv', %_, %Heq, Hp ⟩; iexists xv'; isplit r; ipure_intro; simp [Heq]
+  iintro ⟨ xv', %Heq, Hp ⟩; iexists xv'; isplit r; ipure_intro; simp [Heq]
   iassumption
 
 theorem eq_or_disj_entail_disj {α β} [Coe α β] {xv yv : β} {xp yp : RawPtr α} :
   ⊢ (eq_or_disj xp yp (.Disj xv yv)) -∗ ∃ (xv' yv' : α), ⌜↑xv' = xv⌝ ∗ ⌜↑yv' = yv⌝ ∗ (xp ↦ xv') ∗ (yp ↦ yv') := by
   simp [eq_or_disj]
   iintro ⟨ xv', yv', %Hcoe1, %Hcoe2, Hxp, Hyp ⟩; iexists xv'; iexists yv'; simp_all [Coe.coe]
-  isplit r; ipure_intro; constructor; isplit r; ipure_intro; constructor
-  isplit l [Hxp] <;> iassumption
-
--- def EqOrDisj.write
-
--- def eq_or_disj (xp yp) (v : EqOrDisj) : aProp FF0 :=
-
 
 noncomputable
 def incr_eq_or_disj (x y : RawPtr U32) : ITree Unit := do
@@ -641,78 +632,57 @@ def incr_disj (x y : U32) : ITree (U32 × U32) := do
 local instance : Coe U32 ℕ where
   coe := UScalar.val
 
+@[simp, scalar_tac_simps] theorem coe_u32_nat (x : U32) : (Coe.coe x : Nat) = x.val := by simp [Coe.coe]
+
 theorem incr_eq_or_disj.spec (x y : RawPtr U32) (v : EqOrDisj ℕ) (hv : (read v) < U32.max) :
   ⊢ ⦃ eq_or_disj x y v ⦄
   (incr_eq_or_disj x y)
   ⦃ fun _ => (eq_or_disj x y (write v ((read v) + 1))) ⦄
   {{ fun _ => True }} := by
   unfold incr_eq_or_disj
-  apply post_bind; apply (@read_ptr.spec' U32 ℕ); apply v; apply y
-  · iintro Heq; isplit l; iassumption; iemp_intro
-  intros x1 hx1; apply (@post_bind _ _ (eq_or_disj x y v))
-  · apply UScalar.add_spec; simp [Coe.coe] at hx1; simp [hx1]; scalar_tac
-  · iintro ⟨ Heq, Hemp ⟩; isplit r [Heq] <;> iassumption
-  intros x2 h2; apply post_ret; apply (@write_ptr.spec' U32 ℕ); apply v; apply x
-  · iintro ⟨ _, Heq ⟩; isplit l [Heq]; iassumption; iemp_intro
-  intros x3 h3; isplit
-  · iintro ⟨ Heq, _ ⟩; simp_all [Coe.coe, h2]; iassumption
-  · ipure_intro; constructor
+  xprogress with (@read_ptr.spec' U32 Nat _); intros v hv
+  xprogress; intros v1 hv1
+  xprogress with (@write_ptr.spec' U32 Nat _)
+  simp [*]
+
+attribute [scalar_tac_simps] read write
 
 theorem incr_eq.spec (x : U32) (hv : x.val < U32.max) :
   ⊢ (incr_eq x) {{ fun x' => x'.val = x.val + 1 }} := by
   unfold incr_eq
-  xprogress; iintro _; isplit <;> iemp_intro
-  intros xp
+  xprogress; intros xp
+  -- Introduce `eq_or_disj`
+  apply entail_post
+  apply (@eq_entail_eq_or_disj U32 ℕ)
   --
-  apply (@entail_post _ (xp ↦ x)); iintro ⟨ Hp, _ ⟩; iassumption
-  apply entail_post; apply (@eq_entail_eq_or_disj U32 ℕ)
-  --
-  apply post_bind; apply (incr_eq_or_disj.spec _ _ (.Eq x)); simp_all only [read]
-  · iintro Heq; isplit l [Heq]; iassumption; iemp_intro
-  intros _ _
-  --
-  simp [write, read]
-  apply (@entail_post _ (eq_or_disj xp xp (EqOrDisj.Eq (Coe.coe x + 1))))
-  · iintro ⟨ Heq, _ ⟩; iassumption
-  simp [Coe.coe]
-  apply entail_post; apply eq_or_disj_entail_eq
-  xsimp
-  xprogress; rename U32 => y; apply y; iintro H; isplit l [H]; iassumption; iemp_intro
-  isplit
-  · iintro _; iemp_intro
-  · ipure_intro; simp_all [Coe.coe]
+  xprogress with incr_eq_or_disj.spec
+  xprogress
+  . apply (x.val + 1)#u32
+  . simp [write, read, eq_or_disj]
+    iintro ⟨ x1, h0, h1 ⟩ -- TODO: this doesn't work: iintro ⟨ x1, %h0, h1 ⟩
+    sorry -- TODO:
+  . isplit
+    . iintro _; iemp_intro
+    . simp
+  . sorry
 
 theorem incr_disj.spec (x y : U32) (hv : x.val < U32.max) :
   ⊢ (incr_disj x y) {{ fun (_, y') => y'.val = x.val + 1 }} := by
   unfold incr_disj
-  xprogress; iintro _; isplit <;> iemp_intro
-  intros xp
+  xprogress; intros xp
+  xprogress; intros yp
+  -- Introduce `eq_or_disj`
+  apply (@entail_post _ iprop((xp ↦ x) ∗ yp ↦ y)); simp
+  apply entail_post; apply (@disj_entail_eq_or_disj U32 ℕ)
   --
-  apply (@entail_post _ (xp ↦ x)); iintro ⟨ Hp, _ ⟩; iassumption
-  apply (@post_bind _ _ (xp ↦ x)); apply mut_to_raw.spec; iintro Hp; isplit r; iemp_intro; iassumption
-  intros yp _
-  apply (@entail_post _ iprop((xp ↦ x) ∗ yp ↦ y)); iintro ⟨ Hy, Hx ⟩; isplit l [Hx] <;> iassumption
-  apply entail_post; apply (@disj_entail_eq_or_disj U32 ℕ); simp [Coe.coe]
+  xprogress with (incr_eq_or_disj.spec _ _ (.Disj ↑x ↑y))
+  -- Remove `eq_or_disj`
+  simp [eq_or_disj, write, read]
   --
-  apply post_bind; apply (incr_eq_or_disj.spec _ _ (.Disj ↑x ↑y)); simp_all only [read]
-  · iintro Heq; isplit l [Heq]; iassumption; iemp_intro
-  intros _ _
-  --
-  simp [write, read]
-  apply (@entail_post _ (@eq_or_disj U32 ℕ _ xp yp (EqOrDisj.Disj ↑x (↑x + ↑1))))
-  · iintro ⟨ Heq, _ ⟩; iassumption
-  apply entail_post; apply eq_or_disj_entail_disj
-  xsimp
-  rename_i x y hcoe1 hcoe2
-  apply (@post_bind _ _ (xp ↦ x)); apply end_mut_to_raw.spec; apply y
-  · iintro ⟨ Hx, Hy ⟩; isplit l [Hy] <;> iassumption
-  intros y2 hy2; apply post_bind; apply end_mut_to_raw.spec; apply x
-  · iintro ⟨ _, Hx ⟩; isplit l [Hx]; iassumption; iemp_intro
-  intros x2 hx2;
-  xprogress; iintro _; isplit <;> iemp_intro
-  isplit
-  · iintro _; iemp_intro
-  · ipure_intro; simp_all only [Coe.coe, Nat.add_left_cancel_iff]
+  xsimp; rename_i x1 y1 h0 h1
+  xprogress
+  xprogress
+  xprogress
 
 /-! # Raw pointer to borrow
 
