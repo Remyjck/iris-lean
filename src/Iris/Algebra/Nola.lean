@@ -19,7 +19,7 @@ inductive cif_unsel where
 | /- Basic update -/ cifs_bupd
 | /- Except-0 -/ cifs_except0
 
-inductive cif (FF : Iris.GFunctors) [Iris.IsGFunctors FF] : Type (u + 1) where
+inductive cif (FF : Iris.GFunctors) : Type (u + 1) where
 | /- Universal quantifier -/ cifs_all (A : Type u) (Φ : A -> cif FF)
 | /- Existential quantifier -/ cifs_ex (A : Type u) (Φ : A -> cif FF)
 | /- Binary operator -/ cifs_bin (s : cif_binsel) (P Q : cif FF)
@@ -30,11 +30,13 @@ inductive cif (FF : Iris.GFunctors) [Iris.IsGFunctors FF] : Type (u + 1) where
 | /- Custom selector -/ cifs_own [Iris.CMRA A] [inG FF A] (a : A)
 
 section noliris
-variable (FF : Iris.GFunctors) [Iris.IsGFunctors FF]
+variable (FF : Iris.GFunctors)
 
 open Iris.BI
 
-def cif_sem {FF} [Iris.IsGFunctors FF] (s : cif FF) : Iris.IProp FF :=
+axiom sinv_tok {FF} : cif FF -> Iris.IProp FF
+
+noncomputable def cif_sem {FF} (s : cif FF) : Iris.IProp FF :=
   match s with
   | .cifs_all A Φ => iprop(∀ (a : A), cif_sem (Φ a))
   | .cifs_ex A Φ => iprop(∃ (a : A), cif_sem (Φ a))
@@ -50,8 +52,8 @@ def cif_sem {FF} [Iris.IsGFunctors FF] (s : cif FF) : Iris.IProp FF :=
     | .cifs_except0 => iprop(◇ P))
   | .cifs_pure φ => iprop(⌜φ⌝)
   | .cifs_later Φ => iprop(▷ Φ)
-  | .cifs_inv _ => by sorry
-  | @cif.cifs_own _ _ A _ _ a => own a
+  | .cifs_inv F => sinv_tok F
+  | cif.cifs_own a => own a
 
 instance cif_inhabited : Inhabited (cif FF) where
   default := cif.cifs_pure True
