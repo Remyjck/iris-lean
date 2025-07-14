@@ -4,7 +4,7 @@ import Iris.Algebra.OFE
 import Iris.Algebra.UPred
 import Iris.Algebra.IProp
 import Iris.Instances.UPred.Instance
-import Iris.Algebra.Agree
+import Iris.Algebra.Own
 
 inductive cif_binsel where
 | /- Conjunction -/ cifs_and
@@ -27,8 +27,7 @@ inductive cif (FF : Iris.GFunctors) [Iris.IsGFunctors FF] : Type (u + 1) where
 | /- Pure proposition -/ cifs_pure (P : Prop)
 | /- Later -/ cifs_later (iP : Iris.IProp FF)
 | /- Invariant -/ cifs_inv (fml : cif FF)
-| /- Custom selector -/ cifs_own (M : Iris.COFE.OFunctorPre)
-    (γ : Iris.GId FF) {Hlookup : FF[γ] = M} (m : Iris.COFE.OFunctor M)
+| /- Custom selector -/ cifs_own [Iris.CMRA A] [inG FF A] (a : A)
 
 section noliris
 variable (FF : Iris.GFunctors) [Iris.IsGFunctors FF]
@@ -52,7 +51,7 @@ def cif_sem {FF} [Iris.IsGFunctors FF] (s : cif FF) : Iris.IProp FF :=
   | .cifs_pure φ => iprop(⌜φ⌝)
   | .cifs_later Φ => iprop(▷ Φ)
   | .cifs_inv _ => by sorry
-  | @cif.cifs_own _ _ M γ Hlookup m => by /- apply (UPred.ownM m) -/ sorry
+  | @cif.cifs_own _ _ A _ _ a => own a
 
 instance cif_inhabited : Inhabited (cif FF) where
   default := cif.cifs_pure True
