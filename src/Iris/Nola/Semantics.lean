@@ -7,15 +7,14 @@ import Iris.Instances.UPred.Instance
 import Iris.Algebra.Own
 
 import Iris.Nola.Syntax
+import Iris.Nola.Inv
 
 section noliris
 variable (FF : Iris.GFunctors)
 
 open Iris.BI
 
-axiom sinv_tok {FF} : cif FF -> Iris.IProp FF
-
-noncomputable def cif_sem {FF} (s : cif FF) : Iris.IProp FF :=
+noncomputable def cif_sem {FF} (s : @cif.{u} FF) : Iris.IProp FF :=
   match s with
   | .cifs_all A Φ => iprop(∀ (a : A), cif_sem (Φ a))
   | .cifs_ex A Φ => iprop(∃ (a : A), cif_sem (Φ a))
@@ -31,7 +30,7 @@ noncomputable def cif_sem {FF} (s : cif FF) : Iris.IProp FF :=
     | .cifs_except0 => iprop(◇ P))
   | .cifs_pure φ => iprop(⌜φ⌝)
   | .cifs_later Φ => iprop(▷ Φ)
-  | .cifs_inv F => sinv_tok F
+  | .cifs_inv N F => inv_tok N F
   | cif.cifs_own a => own a
 
 instance cif_inhabited : Inhabited (cif FF) where

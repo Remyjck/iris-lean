@@ -1,5 +1,6 @@
 import Iris.BI
 import Iris.Algebra.Own
+import Iris.Std.Namespaces
 
 inductive cif_binsel where
 | /- Conjunction -/ cifs_and
@@ -21,5 +22,5 @@ inductive cif (FF : Iris.GFunctors) : Type (u + 1) where
 | /- Unary operator -/ cifs_un (s : cif_unsel) (P : cif FF)
 | /- Pure proposition -/ cifs_pure (P : Prop)
 | /- Later -/ cifs_later (iP : Iris.IProp FF)
-| /- Invariant -/ cifs_inv (fml : cif FF)
+| /- Invariant -/ cifs_inv (N : Namespace) (fml : cif FF)
 | /- Custom selector -/ cifs_own [Iris.CMRA A] [inG FF A] (a : A)

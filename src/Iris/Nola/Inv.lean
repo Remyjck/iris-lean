@@ -6,11 +6,13 @@ import Iris.Algebra.UPred
 import Iris.Algebra.IProp
 import Iris.Instances.UPred.Instance
 import Iris.Algebra.Own
+import Iris.Std.Namespaces
 
 import Iris.Nola.Syntax
+
 section sinv
 
-axiom sinv_tok (i : nat) (F : cif FF) : Iris.IProp FF
+axiom sinv_tok (i : Pos) (F : cif FF) : Iris.IProp FF
 
 axiom sinv_auth_tok (M : List (cif FF)) : Iris.IProp FF
 
@@ -21,9 +23,9 @@ axiom sinv_wsat_timeless (sm : cif FF -> Iris.IProp FF) :
   Iris.BI.Timeless (sinv_wsat sm)
 
 axiom sinv_auth_tok_alloc (M : List (cif FF)) F :
-  ⊢ sinv_auth_tok M ==∗ sinv_auth_tok (F :: M) ∗ sinv_tok (List.length M) F
+  ⊢ sinv_auth_tok M ==∗ sinv_auth_tok (F :: M) ∗ sinv_tok (Pos.ofNat (List.length M)) F
 
-axiom sinv_tok_acc {i : nat} {sm : cif FF -> Iris.IProp FF} {F : cif FF} :
+axiom sinv_tok_acc {i : Pos} {sm : cif FF -> Iris.IProp FF} {F : cif FF} :
   ⊢ sinv_tok i F -∗
     sinv_wsat sm -∗
     sm F ∗ (sm F -∗ sinv_wsat sm)
@@ -32,7 +34,22 @@ end sinv
 
 section inv
 
-def inv_tok (N : namespace) (F : cif FF) : Iris.IProp FF :=
-  ∃ i, ⌜i ∈ (N : coPset)⌝ ∗ sinv_tok i F
+def inv_tok (N : Namespace) (F : cif FF) : Iris.IProp FF :=
+  iprop(∃ i, ⌜i ∈ N⌝ ∗ sinv_tok i F)
+
+def magic_inv {sm : cif FF -> Iris.IProp FF} N F :=
+  iprop(∃ Q, (sm Q ∗-∗ sm F) ∗ inv_tok N F)
+
+theorem inv_tok_subset {N N'} {F : cif FF} :
+  N ⊆ N' ->
+  inv_tok N F ⊢ inv_tok N' F := by
+  intros Hsubseteq
+  unfold inv_tok
+  iintro ⟨ i, %Hin, Hi ⟩
+  iexists i; isplit; ipure_intro; apply (Hsubseteq Hin)
+  iexact Hi
+
+axiom inv_tok_alloc {sm : cif FF -> Iris.IProp FF} (F : cif FF) N :
+  ⊢ sm F ==∗ inv_tok N F
 
 end inv
