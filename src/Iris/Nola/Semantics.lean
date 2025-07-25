@@ -15,7 +15,7 @@ variable (FF : Iris.GFunctors)
 
 open Iris.BI
 
-def cif_sem {FF} (s : @cif.{u} FF) : Iris.IProp FF :=
+def cif_sem {FF} (s : cif FF) : Iris.IProp FF :=
   match s with
   | .cifs_all A Φ => iprop(∀ (a : A), cif_sem (Φ a))
   | .cifs_ex A Φ => iprop(∃ (a : A), cif_sem (Φ a))
