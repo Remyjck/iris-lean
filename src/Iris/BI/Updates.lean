@@ -81,7 +81,7 @@ class BIUpdate (PROP : Type _) [BI PROP] extends BUpd PROP where
   trans {P : PROP} : iprop(|==> |==> P ⊢ |==> P)
   frame_r {P R : PROP} : iprop((|==> P) ∗ R ⊢ |==> (P ∗ R))
 
-class BIFUpdate (PROP MASK : Type _) [BI PROP] extends FUpd PROP where
+class BIFUpdate (PROP : Type _) [BI PROP] extends FUpd PROP where
   [ne {E1 E2 : CoPset} : OFE.NonExpansive (FUpd.fupd E1 E2 (PROP := PROP))]
   subset {E1 E2 : CoPset} : Subset E2 E1 → ⊢ |={E1, E2}=> |={E2, E1}=> (emp : PROP)
   except0 {E1 E2 : CoPset} (P : PROP) : (◇ |={E1, E2}=> P) ⊢ |={E1, E2}=> P
@@ -91,13 +91,13 @@ class BIFUpdate (PROP MASK : Type _) [BI PROP] extends FUpd PROP where
   frame_r {E1 E2 : CoPset} (P R : PROP) :
     iprop((|={E1, E2}=> P) ∗ R ⊢ |={E1, E2}=> P ∗ R)
 
-class BIUpdateFUpdate (PROP : Type _) [BI PROP] [BIUpdate PROP] [BIFUpdate PROP MASK] where
+class BIUpdateFUpdate (PROP : Type _) [BI PROP] [BIUpdate PROP] [BIFUpdate PROP] where
   fupd_of_bupd {P : PROP} {E : CoPset} : iprop(⊢ |==> P) → iprop(⊢ |={E}=> P)
 
 class BIBUpdatePlainly (PROP : Type _) [BI PROP] [BIUpdate PROP] [BIPlainly PROP] where
   bupd_plainly {P : PROP} : iprop((|==> ■ P)) ⊢ P
 
-class BIFUpdatePlainly (PROP MASK : Type _) [BI PROP] [BIFUpdate PROP MASK] [BIPlainly PROP] where
+class BIFUpdatePlainly (PROP : Type _) [BI PROP] [BIFUpdate PROP] [BIPlainly PROP] where
   fupd_plainly_keep_l (E E' : CoPset) (P R : PROP) : (R ={E,E'}=∗ ■ P) ∗ R ⊢ |={E}=> P ∗ R
   fupd_plainly_later (E : CoPset) (P : PROP) : (▷ |={E}=> ■ P) ⊢ |={E}=> ▷ ◇ P
   fupd_plainly_sForall_2 (E : CoPset) (Φ : PROP → Prop) :
