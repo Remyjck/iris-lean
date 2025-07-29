@@ -85,6 +85,7 @@ class BIFUpdate (PROP : Type _) [BI PROP] extends FUpd PROP where
   [ne {E1 E2 : CoPset} : OFE.NonExpansive (FUpd.fupd E1 E2 (PROP := PROP))]
   subset {E1 E2 : CoPset} : Subset E2 E1 → ⊢ |={E1, E2}=> |={E2, E1}=> (emp : PROP)
   except0 {E1 E2 : CoPset} (P : PROP) : (◇ |={E1, E2}=> P) ⊢ |={E1, E2}=> P
+  mono E1 E2 (P Q : PROP) : (P ⊢ Q) → (|={E1,E2}=> P) ⊢ |={E1,E2}=> Q
   trans {E1 E2 E3 : CoPset} (P : PROP) : (|={E1, E2}=> |={E2, E3}=> P) ⊢ |={E1, E3}=> P
   mask_frame_r' {E1 E2 Ef : CoPset} (P : PROP) :
     E1 ## Ef → (|={E1,E2}=> ⌜E2 ## Ef⌝ → P) ⊢ |={CoPset.union E1 Ef, CoPset.union E2 Ef}=> P
@@ -92,7 +93,7 @@ class BIFUpdate (PROP : Type _) [BI PROP] extends FUpd PROP where
     iprop((|={E1, E2}=> P) ∗ R ⊢ |={E1, E2}=> P ∗ R)
 
 class BIUpdateFUpdate (PROP : Type _) [BI PROP] [BIUpdate PROP] [BIFUpdate PROP] where
-  fupd_of_bupd {P : PROP} {E : CoPset} : iprop(⊢ |==> P) → iprop(⊢ |={E}=> P)
+  fupd_of_bupd {P : PROP} {E : CoPset} : |==> P ⊢ |={E}=> P
 
 class BIBUpdatePlainly (PROP : Type _) [BI PROP] [BIUpdate PROP] [BIPlainly PROP] where
   bupd_plainly {P : PROP} : iprop((|==> ■ P)) ⊢ P
@@ -161,3 +162,47 @@ instance {P : PROP} [Plain P] : Plain iprop(|==> P) :=
 
 end BUpdPlainlyLaws
 end BUpdLaws
+
+section FUpdLaws
+
+variable [BI PROP] [BIFUpdate PROP]
+
+open BIFUpdate
+
+theorem fupd_mask_intro_subseteq {E1 E2 : CoPset} {P : PROP} : E2 ⊆ E1 ->
+  P ⊢ |={E1, E2}=> |={E2, E1}=> P := by
+  intro HE
+  apply entails_trans.trans (emp_sep.2)
+  apply entails_trans.trans; apply sep_mono_l (BIFUpdate.subset HE)
+  apply entails_trans.trans (BIFUpdate.frame_r _ _); apply BIFUpdate.mono
+  apply entails_trans.trans (BIFUpdate.frame_r _ _); apply BIFUpdate.mono
+  apply emp_sep.1
+
+theorem fupd_intro E (P : PROP) : P ⊢ |={E}=> P := by
+  apply entails_trans.trans _ (@BIFUpdate.trans _ _ _ E E E P)
+  apply fupd_mask_intro_subseteq
+  simp [Subset]
+
+theorem fupd_except0 E1 E2 (P : PROP) : (|={E1,E2}=> ◇ P) ⊢ |={E1, E2}=> P := by
+  apply entails_trans.trans _ (@BIFUpdate.trans _ _ _ E1 E2 E2 P)
+  apply BIFUpdate.mono
+  apply entails_trans.trans _ (BIFUpdate.except0 _)
+  unfold BIBase.except0; apply or_mono_r; apply fupd_intro
+
+theorem fupd_mask_weaken {E1} E2 {E3} {P : PROP} : E2 ⊆ E1 ->
+  ((|={E2,E1}=> emp) ={E2,E3}=∗ P) ⊢ |={E1,E3}=> P := by
+  intro HE
+  apply entails_trans.trans (emp_sep.2)
+  apply entails_trans.trans; apply sep_mono_l (fupd_mask_intro_subseteq HE)
+  apply entails_trans.trans _ (@BIFUpdate.trans _ _ _ _ E2 _ P)
+  apply entails_trans.trans (BIFUpdate.frame_r _ _); apply BIFUpdate.mono
+  apply wand_elim_r
+
+theorem fupd_mask_intro E1 E2 (P : PROP) : E2 ⊆ E1 →
+  ((|={E2,E1}=> emp) -∗ P) ⊢ |={E1,E2}=> P := by
+  intro HE
+  apply entails_trans.trans _ (fupd_mask_weaken _ HE)
+  apply wand_mono_r (fupd_intro _ _)
+
+
+end FUpdLaws

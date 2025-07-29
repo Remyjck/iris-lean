@@ -74,7 +74,7 @@ def pure (P : Prop) : AProp FF false :=
 def ainv_tok {b} (N : Namespace) (P : AProp FF b) : AProp FF false :=
   FProp (inv_tok N P.to_Formula) (cif.cifs_inv N P.to_Formula) (by apply Iris.BI.wandIff_refl)
 
-theorem ainv_tok_alloc N (P : AProp FF b) :
-  ⊢ iprop(P.to_IProp -∗ bupdw (inv_wsat) (ainv_tok N P))
+-- theorem ainv_tok_alloc N (P : AProp FF b) :
+--   ⊢ iprop(P.to_IProp -∗ bupdw (inv_wsat) (ainv_tok N P))
 
 end AProp
