@@ -93,5 +93,5 @@ theorem iRes_singleton_valid [Iris.UCMRA M] [iA : Iris.UCMRA A] [i : inG FF A] (
   try apply (Hg x)
   sorry
 
-abbrev own [Iris.CMRA A] [inG FF A] (a : A) : Iris.IProp FF :=
+abbrev Iris.own [Iris.CMRA A] [inG FF A] (a : A) : Iris.IProp FF :=
   UPred.ownM (iRes_singleton a)

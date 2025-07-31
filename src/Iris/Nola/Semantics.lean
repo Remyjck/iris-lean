@@ -8,6 +8,7 @@ import Iris.Algebra.Own
 import Iris.ProofMode
 
 import Iris.Nola.Syntax
+import Iris.Nola.Notations
 import Iris.Nola.Inv
 
 section noliris
@@ -15,31 +16,37 @@ variable (FF : Iris.GFunctors)
 
 open Iris.BI
 
-def cif_sem {FF} (s : cif FF) : Iris.IProp FF :=
+def cif.sem {FF} (s : cif FF) : Iris.IProp FF :=
   match s with
-  | @cif.cifs_all _ A Φ => iprop(∀ (a : A), cif_sem (Φ a))
-  | @cif.cifs_ex _ A Φ => iprop(∃ (a : A), cif_sem (Φ a))
-  | .cifs_bin s P Q => let (P, Q) := (cif_sem P, cif_sem Q);
+  | @cif.all _ A Φ => iprop(∀ (a : A), cif.sem (Φ a))
+  | @cif.ex _ A Φ => iprop(∃ (a : A), cif.sem (Φ a))
+  | .bin s P Q => let (P, Q) := (cif.sem P, cif.sem Q);
     (match s with
-    | .cifs_and => iprop(P ∧ Q) | .cifs_or => iprop(P ∨ Q)
-    | .cifs_imp => iprop(P -> Q) | .cifs_wand => iprop(P -∗ Q)
-    | .cifs_sep => iprop(P ∗ Q))
-  | .cifs_un s P => let P := cif_sem P;
+    | .and => iprop(P ∧ Q) | .or => iprop(P ∨ Q)
+    | .imp => iprop(P -> Q) | .wand => iprop(P -∗ Q)
+    | .sep => iprop(P ∗ Q))
+  | .un s P => let P := cif.sem P;
     (match s with
-    | .cifs_plain => iprop(■ P) | .cifs_pers => iprop(<pers> P)
-    | .cifs_bupd => iprop(|==> P)
-    | .cifs_except0 => iprop(◇ P))
-  | .cifs_pure φ => iprop(⌜φ⌝)
-  | .cifs_later Φ => iprop(▷ Φ)
-  | .cifs_inv N F => inv_tok N F
-  | cif.cifs_own a => own a
+    | .plain => iprop(■ P) | .pers => iprop(<pers> P)
+    | .bupd => iprop(|==> P)
+    | .except0 => iprop(◇ P))
+  | .pure φ => iprop(⌜φ⌝)
+  | .later Φ => iprop(▷ Φ)
+  | .inv N F => inv_tok N F
+  | cif.own a => Iris.own a
 
 instance cif_inhabited : Inhabited (cif FF) where
-  default := cif.cifs_pure True
+  default := cif.pure True
 
-notation "⟦" f "⟧" => cif_sem f
+syntax (name := sem) "⟦" (term:arg) "⟧" : term
+
+macro_rules
+  | `(⟦$f⟧)      => ``(cif.sem $f)
+
+delab_rule cif.sem
+  | `($_ $f) => ``(⟦$f⟧)
 
 @[simp]
 theorem cif_wandiff_sem (P Q : @cif.{u1} FF) :
-  ⟦ cifs_wandiff P Q ⟧ = iprop(⟦ P ⟧ ∗-∗ ⟦ Q ⟧) := by
-  simp [cifs_wandiff, cif_sem]
+  ⟦ cif(P ∗-∗ Q) ⟧ = iprop(⟦ P ⟧ ∗-∗ ⟦ Q ⟧) := by
+  simp [cif.wandIff, cif.sem]
