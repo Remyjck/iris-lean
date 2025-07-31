@@ -16,8 +16,8 @@ inductive cif_unsel where
 | /- Except-0 -/ cifs_except0
 
 inductive cif.{u} (FF : Iris.GFunctors) : Type (u + 1) where
-| /- Universal quantifier -/ cifs_all (A : Type u) (Φ : A -> cif FF)
-| /- Existential quantifier -/ cifs_ex (A : Type u) (Φ : A -> cif FF)
+| /- Universal quantifier -/ cifs_all {A : Type u} (Φ : A -> cif FF)
+| /- Existential quantifier -/ cifs_ex {A : Type u} (Φ : A -> cif FF)
 | /- Binary operator -/ cifs_bin (s : cif_binsel) (P : cif FF) (Q : cif FF)
 | /- Unary operator -/ cifs_un (s : cif_unsel) (P : cif FF)
 | /- Pure proposition -/ cifs_pure (P : Prop)

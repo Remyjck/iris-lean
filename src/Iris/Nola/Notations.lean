@@ -82,27 +82,27 @@ delab_rule cif.cifs_imp
 /- This is necessary since the `∀` syntax is not defined using `explicitBinders` and we can
 therefore not use `expandExplicitBinders` as for `∃`. -/
 macro_rules
-  | `(cif(∀ _%$tk, $Ψ)) => ``(cif.cifs_all _ (fun _%$tk => cif($Ψ)))
+  | `(cif(∀ _%$tk, $Ψ)) => ``(cif.cifs_all (fun _%$tk => cif($Ψ)))
 macro_rules
-  | `(cif(∀ $x:ident, $Ψ)) => ``(cif.cifs_all _ (fun $x => cif($Ψ)))
+  | `(cif(∀ $x:ident, $Ψ)) => ``(cif.cifs_all (fun $x => cif($Ψ)))
 macro_rules
-  | `(cif(∀ (_%$tk : $t), $Ψ)) => ``(cif.cifs_all $t (fun (_%$tk : $t) => cif($Ψ)))
+  | `(cif(∀ (_%$tk : $t), $Ψ)) => ``(cif.cifs_all (fun (_%$tk : $t) => cif($Ψ)))
   | `(cif(∀ (_%$tk $xs* : $t), $Ψ)) =>
-    ``(cif.cifs_all $t (fun (_%$tk : $t) => cif(∀ ($xs* : $t), $Ψ)))
+    ``(cif.cifs_all (fun (_%$tk : $t) => cif(∀ ($xs* : $t), $Ψ)))
 macro_rules
-  | `(cif(∀ ($x:ident : $t), $Ψ)) => ``(cif.cifs_all $t (fun ($x : $t) => cif($Ψ)))
+  | `(cif(∀ ($x:ident : $t), $Ψ)) => ``(cif.cifs_all (fun ($x : $t) => cif($Ψ)))
   | `(cif(∀ ($x:ident $xs* : $t), $Ψ)) =>
-    ``(cif.cifs_all $t (fun ($x : $t) => cif(∀ ($xs* : $t), $Ψ)))
+    ``(cif.cifs_all (fun ($x : $t) => cif(∀ ($xs* : $t), $Ψ)))
 macro_rules
   | `(cif(∀ {_%$tk : $t}, $Ψ)) =>
-    ``(cif.cifs_all $t (fun {_%$tk : $t}  => cif($Ψ)))
+    ``(cif.cifs_all (fun {_%$tk : $t}  => cif($Ψ)))
   | `(cif(∀ {_%$tk $xs* : $t}, $Ψ)) =>
-    ``(cif.cifs_all $t (fun {_%$tk : $t}  => cif(∀ {$xs* : $t}, $Ψ)))
+    ``(cif.cifs_all (fun {_%$tk : $t}  => cif(∀ {$xs* : $t}, $Ψ)))
 macro_rules
   | `(cif(∀ {$x:ident : $t}, $Ψ)) =>
-    ``(cif.cifs_all $t (fun ($x : $t) => cif($Ψ)))
+    ``(cif.cifs_all (fun ($x : $t) => cif($Ψ)))
   | `(cif(∀ {$x:ident $xs* : $t}, $Ψ)) =>
-    ``(cif.cifs_all $t (fun ($x : $t) => cif(∀ {$xs* : $t}, $Ψ)))
+    ``(cif.cifs_all (fun ($x : $t) => cif(∀ {$xs* : $t}, $Ψ)))
 macro_rules
   | `(cif(∀ $x $y $xs*, $Ψ)) => ``(cif(∀ $x, ∀ $y $xs*, $Ψ))
 
@@ -125,7 +125,7 @@ delab_rule cif.cifs_except0
   | `($_ $P) => do ``(cif(◇ $(← unpackCif P)))
 
 def testCif1 : cif FF :=
-  cif.cifs_all Nat (fun x => cif.cifs_all Nat (fun (y : Nat) => cif.cifs_pure (x < y)))
+  cif.cifs_all (fun (x : Nat) => cif.cifs_all (fun (y : Nat) => cif.cifs_pure (x < y)))
 
 #print testCif1
 

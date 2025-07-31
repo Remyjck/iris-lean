@@ -19,9 +19,47 @@ def guard : AProp FF b -> AProp FF false
 | IProp P => FProp iprop(▷ P) cif(▷ P) (by apply Iris.BI.wandIff_refl)
 | FProp iP fP HP => FProp iP fP HP
 
+def unguard : AProp FF b -> AProp FF true
+| IProp P | FProp P _ _ => IProp P
+
 def to_Formula : AProp FF b -> cif FF := fun P =>
 match P.guard with
 | FProp _ fP _ => fP
+
+/- Binary connectives -/
+
+def and {b₁ b₂} (P : AProp FF b₁) (Q : AProp FF b₂) : AProp FF (b₁ || b₂) :=
+match P, Q with
+| IProp P, IProp Q => IProp iprop(P ∧ Q)
+| IProp P, FProp iQ _ _ => IProp iprop(P ∧ iQ)
+| FProp iP _ _, IProp Q => IProp iprop(iP ∧ Q)
+| FProp iP fP HP, FProp iQ fQ HQ => FProp iprop(iP ∧ iQ) cif(fP ∧ fQ)
+  (by
+    simp [cif_sem, cif.cifs_and]
+    apply Iris.BI.equiv_wandIff
+    apply (Iris.BI.and_congr (Iris.BI.wandIff_equiv HP) (Iris.BI.wandIff_equiv HQ)))
+
+def or {b₁ b₂} (P : AProp FF b₁) (Q : AProp FF b₂) : AProp FF (b₁ || b₂) :=
+match P, Q with
+| IProp P, IProp Q => IProp iprop(P ∨ Q)
+| IProp P, FProp iQ _ _ => IProp iprop(P ∨ iQ)
+| FProp iP _ _, IProp Q => IProp iprop(iP ∨ Q)
+| FProp iP fP HP, FProp iQ fQ HQ => FProp iprop(iP ∨ iQ) cif(fP ∨ fQ)
+  (by
+    simp [cif_sem, cif.cifs_or]
+    apply Iris.BI.equiv_wandIff
+    apply (Iris.BI.or_congr (Iris.BI.wandIff_equiv HP) (Iris.BI.wandIff_equiv HQ)))
+
+def imp {b₁ b₂} (P : AProp FF b₁) (Q : AProp FF b₂) : AProp FF (b₁ || b₂) :=
+match P, Q with
+| IProp P, IProp Q => IProp iprop(P -> Q)
+| IProp P, FProp iQ _ _ => IProp iprop(P -> iQ)
+| FProp iP _ _, IProp Q => IProp iprop(iP -> Q)
+| FProp iP fP HP, FProp iQ fQ HQ => FProp iprop(iP -> iQ) cif(fP -> fQ)
+  (by
+    simp [cif_sem, cif.cifs_imp]
+    apply Iris.BI.equiv_wandIff
+    apply (Iris.BI.imp_congr (Iris.BI.wandIff_equiv HP) (Iris.BI.wandIff_equiv HQ)))
 
 def sep {b₁ b₂} (P : AProp FF b₁) (Q : AProp FF b₂) : AProp FF (b₁ || b₂) :=
 match P, Q with
@@ -34,6 +72,17 @@ match P, Q with
     apply Iris.BI.equiv_wandIff
     apply (Iris.BI.sep_congr (Iris.BI.wandIff_equiv HP) (Iris.BI.wandIff_equiv HQ)))
 
+def wand {b₁ b₂} (P : AProp FF b₁) (Q : AProp FF b₂) : AProp FF (b₁ || b₂) :=
+match P, Q with
+| IProp P, IProp Q => IProp iprop(P -∗ Q)
+| IProp P, FProp iQ _ _ => IProp iprop(P -∗ iQ)
+| FProp iP _ _, IProp Q => IProp iprop(iP -∗ Q)
+| FProp iP fP HP, FProp iQ fQ HQ => FProp iprop(iP -∗ iQ) cif(fP -∗ fQ)
+  (by
+    simp [cif_sem, cif.cifs_wand]
+    apply Iris.BI.equiv_wandIff
+    apply (Iris.BI.wand_congr (Iris.BI.wandIff_equiv HP) (Iris.BI.wandIff_equiv HQ)))
+
 theorem wandIff_all (A : Type) (P Q : A -> Iris.IProp FF) :
   (∀ (a : A), ⊢ iprop(P a ∗-∗ Q a)) ->
   ⊢ iprop((∀ a, P a) ∗-∗ (∀ a, Q a)) := by
@@ -44,6 +93,36 @@ theorem wandIff_all (A : Type) (P Q : A -> Iris.IProp FF) :
   replace Hall := Iris.BI.wandIff_equiv (Hall a)
   · apply Hall.1
   · apply Hall.2
+
+theorem wandIff_ex (A : Type) (P Q : A -> Iris.IProp FF) :
+  (∀ (a : A), ⊢ iprop(P a ∗-∗ Q a)) ->
+  ⊢ iprop((∃ a, P a) ∗-∗ (∃ a, Q a)) := by
+  intros Hall
+  unfold Iris.BI.wandIff; isplit <;>
+  iintro ⟨a, HP⟩ <;> iexists a <;> istop <;>
+  replace Hall := Iris.BI.wandIff_equiv (Hall a)
+  · apply Hall.1
+  · apply Hall.2
+
+/- Unary Connectives -/
+
+def persistently {b} : AProp FF b -> AProp FF b
+| IProp P => IProp iprop(<pers> P)
+| FProp iP fP HP => FProp iprop(<pers> iP) cif(<pers> fP)
+  (by
+    simp [cif.cifs_pers, cif_sem]
+    apply Iris.BI.equiv_wandIff
+    apply Iris.BI.persistently_congr
+    apply Iris.BI.wandIff_equiv HP)
+
+def later {b} : AProp FF b -> AProp FF false
+| IProp P => FProp iprop(▷ P) cif(▷ P) (by apply Iris.BI.wandIff_refl)
+| FProp iP fP HP => FProp iprop(▷ iP) cif(▷ iP) (by apply Iris.BI.wandIff_refl)
+
+def pure (P : Prop) : AProp FF false :=
+  FProp iprop(⌜P⌝) cif(⌜P⌝) (by apply Iris.BI.wandIff_refl)
+
+/- Quantifiers -/
 
 def all {A : Type} {b} (Φ : A -> AProp FF b) : AProp FF b :=
 match b with
@@ -57,19 +136,23 @@ match b with
 def all_pred {A : Type} (Φ : A -> (∀ b, AProp FF b)) : AProp FF true :=
   IProp iprop(∀ a, (Φ a true).to_IProp)
 
-def wand {b₁ b₂} (P : AProp FF b₁) (Q : AProp FF b₂) : AProp FF (b₁ || b₂) :=
-match P, Q with
-| IProp P, IProp Q => IProp iprop(P -∗ Q)
-| IProp P, FProp iQ _ _ => IProp iprop(P -∗ iQ)
-| FProp iP _ _, IProp Q => IProp iprop(iP -∗ Q)
-| FProp iP fP HP, FProp iQ fQ HQ => FProp iprop(iP -∗ iQ) cif(fP -∗ fQ)
-  (by
-    simp [cif_sem, cif.cifs_wand]
-    apply Iris.BI.equiv_wandIff
-    apply (Iris.BI.wand_congr (Iris.BI.wandIff_equiv HP) (Iris.BI.wandIff_equiv HQ)))
+def sForall (Ψ : ∀ b, AProp FF b -> Prop) : AProp FF true :=
+  IProp iprop(∀ a, ⌜Ψ true a⌝)
 
-def pure (P : Prop) : AProp FF false :=
-  FProp iprop(⌜P⌝) cif(⌜P⌝) (by apply Iris.BI.wandIff_refl)
+def ex {A : Type} {b} (Φ : A -> AProp FF b) : AProp FF b :=
+match b with
+| true => IProp iprop(∃ a, (Φ a).to_IProp)
+| false => FProp iprop(∃ a, (Φ a).to_IProp) cif(∃ (a : A), (Φ a).to_Formula)
+  (by
+    simp [cif_sem]; unfold Iris.BI.wandIff
+    apply wandIff_ex; intro a
+    rcases (Φ a) with _ | ⟨ iP, fP, HP ⟩; simp [to_Formula, to_IProp]; exact HP )
+
+def ex_pred {A : Type} (Φ : A -> (∀ b, AProp FF b)) : AProp FF true :=
+  IProp iprop(∃ a, (Φ a true).to_IProp)
+
+def sExists (Ψ : ∀ b, AProp FF b -> Prop) : AProp FF true :=
+  IProp iprop(∃ a, iprop(⌜Ψ true a⌝))
 
 def ainv_tok {b} (N : Namespace) (P : AProp FF b) : AProp FF false :=
   FProp (inv_tok N P.to_Formula) (cif.cifs_inv N P.to_Formula) (by apply Iris.BI.wandIff_refl)

@@ -17,8 +17,8 @@ open Iris.BI
 
 def cif_sem {FF} (s : cif FF) : Iris.IProp FF :=
   match s with
-  | .cifs_all A Φ => iprop(∀ (a : A), cif_sem (Φ a))
-  | .cifs_ex A Φ => iprop(∃ (a : A), cif_sem (Φ a))
+  | @cif.cifs_all _ A Φ => iprop(∀ (a : A), cif_sem (Φ a))
+  | @cif.cifs_ex _ A Φ => iprop(∃ (a : A), cif_sem (Φ a))
   | .cifs_bin s P Q => let (P, Q) := (cif_sem P, cif_sem Q);
     (match s with
     | .cifs_and => iprop(P ∧ Q) | .cifs_or => iprop(P ∨ Q)
@@ -26,7 +26,7 @@ def cif_sem {FF} (s : cif FF) : Iris.IProp FF :=
     | .cifs_sep => iprop(P ∗ Q))
   | .cifs_un s P => let P := cif_sem P;
     (match s with
-    | .cifs_plain => iprop(■ P) | .cifs_pers => iprop(□ P)
+    | .cifs_plain => iprop(■ P) | .cifs_pers => iprop(<pers> P)
     | .cifs_bupd => iprop(|==> P)
     | .cifs_except0 => iprop(◇ P))
   | .cifs_pure φ => iprop(⌜φ⌝)
