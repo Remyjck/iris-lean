@@ -35,7 +35,7 @@ match P, Q with
 | FProp iP _ _, IProp Q => IProp iprop(iP ∧ Q)
 | FProp iP fP HP, FProp iQ fQ HQ => FProp iprop(iP ∧ iQ) cif(fP ∧ fQ)
   (by
-    simp [cif_sem, cif.cifs_and]
+    simp [cif.sem, cif.and]
     apply Iris.BI.equiv_wandIff
     apply (Iris.BI.and_congr (Iris.BI.wandIff_equiv HP) (Iris.BI.wandIff_equiv HQ)))
 
@@ -46,7 +46,7 @@ match P, Q with
 | FProp iP _ _, IProp Q => IProp iprop(iP ∨ Q)
 | FProp iP fP HP, FProp iQ fQ HQ => FProp iprop(iP ∨ iQ) cif(fP ∨ fQ)
   (by
-    simp [cif_sem, cif.cifs_or]
+    simp [cif.sem, cif.or]
     apply Iris.BI.equiv_wandIff
     apply (Iris.BI.or_congr (Iris.BI.wandIff_equiv HP) (Iris.BI.wandIff_equiv HQ)))
 
@@ -57,7 +57,7 @@ match P, Q with
 | FProp iP _ _, IProp Q => IProp iprop(iP -> Q)
 | FProp iP fP HP, FProp iQ fQ HQ => FProp iprop(iP -> iQ) cif(fP -> fQ)
   (by
-    simp [cif_sem, cif.cifs_imp]
+    simp [cif.sem, cif.imp]
     apply Iris.BI.equiv_wandIff
     apply (Iris.BI.imp_congr (Iris.BI.wandIff_equiv HP) (Iris.BI.wandIff_equiv HQ)))
 
@@ -68,7 +68,7 @@ match P, Q with
 | FProp iP _ _, IProp Q => IProp iprop(iP ∗ Q)
 | FProp iP fP HP, FProp iQ fQ HQ => FProp iprop(iP ∗ iQ) cif(fP ∗ fQ)
   (by
-    simp [cif_sem, cif.cifs_sep]
+    simp [cif.sem, cif.sep]
     apply Iris.BI.equiv_wandIff
     apply (Iris.BI.sep_congr (Iris.BI.wandIff_equiv HP) (Iris.BI.wandIff_equiv HQ)))
 
@@ -79,7 +79,7 @@ match P, Q with
 | FProp iP _ _, IProp Q => IProp iprop(iP -∗ Q)
 | FProp iP fP HP, FProp iQ fQ HQ => FProp iprop(iP -∗ iQ) cif(fP -∗ fQ)
   (by
-    simp [cif_sem, cif.cifs_wand]
+    simp [cif.sem, cif.wand]
     apply Iris.BI.equiv_wandIff
     apply (Iris.BI.wand_congr (Iris.BI.wandIff_equiv HP) (Iris.BI.wandIff_equiv HQ)))
 
@@ -110,7 +110,7 @@ def persistently {b} : AProp FF b -> AProp FF b
 | IProp P => IProp iprop(<pers> P)
 | FProp iP fP HP => FProp iprop(<pers> iP) cif(<pers> fP)
   (by
-    simp [cif.cifs_pers, cif_sem]
+    simp [cif.sem, cif.pers]
     apply Iris.BI.equiv_wandIff
     apply Iris.BI.persistently_congr
     apply Iris.BI.wandIff_equiv HP)
@@ -129,7 +129,7 @@ match b with
 | true => IProp iprop(∀ a, (Φ a).to_IProp)
 | false => FProp iprop(∀ a, (Φ a).to_IProp) cif(∀ a, (Φ a).to_Formula)
   (by
-    simp [cif_sem]; unfold Iris.BI.wandIff
+    simp [cif.sem]; unfold Iris.BI.wandIff
     apply wandIff_all; intro a
     rcases (Φ a) with _ | ⟨ iP, fP, HP ⟩; simp [to_Formula, to_IProp]; exact HP )
 
@@ -137,14 +137,14 @@ def all_pred {A : Type} (Φ : A -> (∀ b, AProp FF b)) : AProp FF true :=
   IProp iprop(∀ a, (Φ a true).to_IProp)
 
 def sForall (Ψ : ∀ b, AProp FF b -> Prop) : AProp FF true :=
-  IProp iprop(∀ a, ⌜Ψ true a⌝)
+  IProp iprop(UPred.sFo)
 
 def ex {A : Type} {b} (Φ : A -> AProp FF b) : AProp FF b :=
 match b with
 | true => IProp iprop(∃ a, (Φ a).to_IProp)
 | false => FProp iprop(∃ a, (Φ a).to_IProp) cif(∃ (a : A), (Φ a).to_Formula)
   (by
-    simp [cif_sem]; unfold Iris.BI.wandIff
+    simp [cif.sem]; unfold Iris.BI.wandIff
     apply wandIff_ex; intro a
     rcases (Φ a) with _ | ⟨ iP, fP, HP ⟩; simp [to_Formula, to_IProp]; exact HP )
 
@@ -155,7 +155,7 @@ def sExists (Ψ : ∀ b, AProp FF b -> Prop) : AProp FF true :=
   IProp iprop(∃ a, iprop(⌜Ψ true a⌝))
 
 def ainv_tok {b} (N : Namespace) (P : AProp FF b) : AProp FF false :=
-  FProp (inv_tok N P.to_Formula) (cif.cifs_inv N P.to_Formula) (by apply Iris.BI.wandIff_refl)
+  FProp (inv_tok N P.to_Formula) (cif.inv N P.to_Formula) (by apply Iris.BI.wandIff_refl)
 
 -- theorem ainv_tok_alloc N (P : AProp FF b) :
 --   ⊢ iprop(P.to_IProp -∗ bupdw (inv_wsat) (ainv_tok N P))
