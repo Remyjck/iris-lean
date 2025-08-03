@@ -78,5 +78,124 @@ def sExists (Φ : cif.{u} FF → Prop) : cif.{u + 1} FF :=
 def all' {α} (P : α → cif FF) : cif FF := sForall (fun p => ∃ a, P a = p)
 def ex' {α} (P : α → cif FF) : cif FF := sExists (fun p => ∃ a, P a = p)
 
+inductive dist : Nat -> cif FF -> cif FF -> Prop
+| bin : ∀ {n} {s s' : binsel} {P Q P' Q' : cif FF},
+    s = s' ->
+    dist n f f' ->
+    dist n (cif.bin s P Q) (cif.bin s' P' Q')
+| un : ∀ {n} {s s' : unsel} {P P' : cif FF},
+    s = s' ->
+    dist n P P' ->
+    dist n (cif.un s P) (cif.un s' P')
+| all : ∀ {n} {A : Type} {Φ Φ' : A -> cif FF},
+    (∀ a, dist n (Φ a) (Φ' a)) ->
+    dist n (cif.all Φ) (cif.all Φ')
+| ex : ∀ {n} {A : Type} {Φ Φ' : A -> cif FF},
+    (∀ a, dist n (Φ a) (Φ' a)) ->
+    dist n (cif.ex Φ) (cif.ex Φ')
+| pure : ∀ {n} {P P' : Prop},
+    (P <-> P') ->
+    dist n (cif.pure P) (cif.pure P')
+| later : ∀ {n} {iP iP' : Iris.IProp FF},
+    Iris.OFE.DistLater n iP iP' ->
+    dist n (cif.later iP) (cif.later iP')
+| inv : ∀ {n} {N N' : Namespace} {fml fml' : cif FF},
+    (N = N') ->
+    (dist n fml fml') ->
+    dist n (cif.inv N fml) (cif.inv N' fml')
+| own : ∀ {n} {A : Type} [Iris.CMRA A] [inG FF A]
+    {a a' : A},
+    (a = a') ->
+    dist n (@cif.own _ A _ _ a) (@cif.own FF A _ _ a')
+
+theorem dist.refl {n : Nat} {f : cif FF} : dist n f f := by
+  induction f <;> try constructor <;> try assumption
+  all_goals
+    try rfl
+  rename_i P; apply (@dist.pure FF n P P); rfl
+
+theorem dist.symm {n : Nat} {f f' : cif FF} (H : dist n f f') : dist n f' f := by
+  induction H with
+  | bin heq Hdist1 Hdist2 =>
+    apply (dist.bin (by symm; assumption)) <;> assumption
+  | un heq Hdist =>
+    apply (dist.un (by symm; assumption)) <;> assumption
+  | all hdist =>
+    apply dist.all; assumption
+  | ex hdist =>
+    apply dist.ex; assumption
+  | pure heq => rename_i P P'; apply (@dist.pure _ _ P' P); symm; assumption
+  | later Hdist =>
+    apply (dist.later (by symm; assumption)) <;> assumption
+  | inv heq Hdist =>
+    apply (dist.inv (by symm; assumption)) <;> assumption
+  | own heq =>
+    apply dist.own; symm; assumption
+
+theorem dist.trans {n : Nat} {f f' f'' : cif FF}
+    (H1 : dist n f f') (H2 : dist n f' f'') : dist n f f'' := by
+  induction H1 with
+  | bin heq Hdist1 Hdist2 =>
+    cases H2 with | bin heq' Hdist1'
+    apply (dist.bin (heq.trans heq')); assumption
+  | un heq Hdist =>
+    cases H2 with | un heq' Hdist'
+    apply (dist.un (heq.trans heq')); (expose_names; exact a_ih Hdist')
+  | all hdist =>
+    cases H2 with | all hdist'
+    apply dist.all; intro a; (expose_names; exact a_ih a (hdist' a))
+  | ex hdist =>
+    cases H2 with | ex hdist'
+    apply dist.ex; intro a; (expose_names; exact a_ih a (hdist' a))
+  | pure heq =>
+    sorry
+    -- cases hyz with | pure heq'
+    -- apply (@dist.pure _ _ P P'); exact
+    --  rename_i P P'; apply (@dist.pure _ _ P P'); assumption
+  | later Hdist =>
+    cases H2 with | later Hdist'
+    apply dist.later; apply Iris.OFE.DistLater.trans Hdist Hdist'
+  | inv heq Hdist =>
+    cases H2 with | inv heq' Hdist'
+    apply (dist.inv (heq.trans heq')); (expose_names; exact a_ih Hdist')
+  | own heq =>
+    cases H2 with | own heq'
+    apply dist.own (heq.trans heq')
+
+def equiv (f f' : cif FF) := ∀ n, dist n f f'
+
+instance : Iris.OFE (cif FF) where
+  Equiv := equiv
+  Dist := dist
+  dist_eqv := ⟨ fun x => @dist.refl _ _ x, dist.symm, dist.trans ⟩
+  equiv_dist := ⟨ id, fun Hdist n=> (Hdist n)⟩
+  dist_lt := by
+    intros n P Q m Hdist Hlt
+    induction Hdist with
+    | bin heq Hdist1 Hdist2 =>
+      apply (dist.bin heq)
+      apply Hdist2; all_goals assumption
+      <;> try assumption; apply Hdist2
+    | un heq Hdist =>
+      apply (dist.un heq)
+      (expose_names; exact a_ih Hlt)
+    | all hdist =>
+      apply dist.all; intro a
+      (expose_names; exact a_ih a Hlt)
+    | ex hdist =>
+      apply dist.ex; intro a
+      (expose_names; exact a_ih a Hlt)
+    | pure heq =>
+      rename_i P P'
+      apply (@dist.pure _ _ P P' heq)
+    | later Hdist =>
+      apply dist.later; intros m' Hlt'
+      apply Iris.OFE.DistLater.dist_lt Hdist (Nat.lt_trans Hlt' Hlt)
+    | inv heq Hdist =>
+      apply (dist.inv heq)
+      (expose_names; exact a_ih Hlt)
+    | own heq =>
+      apply dist.own; exact heq
+
 
 end cif
