@@ -15,8 +15,6 @@ inductive cif.unsel where
 | /- Basic update -/ bupd
 | /- Except-0 -/ except0
 
-set_option pp.universes true
-
 inductive cif.{u} (FF : Iris.GFunctors) : Type (u + 1) where
 | all {A : Type u} (Φ : A → cif FF)
 | ex  {A : Type u} (Φ : A → cif FF)
@@ -26,6 +24,8 @@ inductive cif.{u} (FF : Iris.GFunctors) : Type (u + 1) where
 | later (iP : Iris.IProp FF)
 | inv (N : Namespace) (fml : cif FF)
 | own {A : Type} [Iris.CMRA A] [inG FF A] (a : A)
+
+instance : Nonempty (cif FF) := ⟨ cif.pure True ⟩
 
 def liftCif.{u, v} (P : cif.{u} FF) : cif.{max u v} FF :=
   match P with
@@ -72,18 +72,29 @@ def imp_lift.{u, v} (P : cif.{u} FF) (Q : cif.{v} FF) : cif.{max u v} FF :=
 def sep (P Q : cif FF) : cif FF := cif.bin binsel.sep P Q
 def wand (P Q : cif FF) : cif FF := cif.bin binsel.wand P Q
 
+
+/- [∀ p, ⌜Φ p⌝ -> p] -/
 def sForall.{u} (Φ : cif.{u} FF → Prop) : cif.{u + 1} FF :=
-  all (fun (p : cif FF) => imp_lift.{u + 1, u} (pure (Φ p)) p)
+  all (fun (p : cif.{u} FF) =>
+    imp
+      (pure (Φ p))
+      (liftCif.{u,u+1} p))
+
+/- [∃ p, ⌜Φ p⌝ ∧ p] -/
 def sExists (Φ : cif.{u} FF → Prop) : cif.{u + 1} FF :=
-  ex (fun p => and_lift.{u + 1, u} (pure (Φ p)) p)
+  ex (fun p =>
+    and
+      (pure (Φ p))
+      (liftCif.{u,u+1} p))
 
 def all' {α} (P : α → cif FF) : cif FF := sForall (fun p => ∃ a, P a = p)
 def ex' {α} (P : α → cif FF) : cif FF := sExists (fun p => ∃ a, P a = p)
 
-inductive dist : Nat -> cif FF -> cif FF -> Prop
+inductive dist {FF} : Nat -> cif FF -> cif FF -> Prop
 | bin : ∀ {n} {s s' : binsel} {P Q P' Q' : cif FF},
     s = s' ->
-    dist n f f' ->
+    dist n P P' ->
+    dist n Q Q' ->
     dist n (cif.bin s P Q) (cif.bin s' P' Q')
 | un : ∀ {n} {s s' : unsel} {P P' : cif FF},
     s = s' ->
@@ -110,12 +121,13 @@ inductive dist : Nat -> cif FF -> cif FF -> Prop
     (a = a') ->
     dist n (@cif.own _ A _ _ a) (@cif.own FF A _ _ a')
 
+@[refl]
 theorem dist.refl {n : Nat} {f : cif FF} : dist n f f := by
   induction f <;> try constructor <;> try assumption
   all_goals
     try rfl
-  rename_i P; apply (@dist.pure FF n P P); rfl
 
+@[symm]
 theorem dist.symm {n : Nat} {f f' : cif FF} (H : dist n f f') : dist n f' f := by
   induction H with
   | bin heq Hdist1 Hdist2 =>
@@ -134,12 +146,21 @@ theorem dist.symm {n : Nat} {f f' : cif FF} (H : dist n f f') : dist n f' f := b
   | own heq =>
     apply dist.own; symm; assumption
 
+theorem pure_dist_inv (P : Prop) (f : cif FF) n :
+  dist n (cif.pure P) f ->
+  ∃ P', f = cif.pure P' ∧ (P <-> P') := by
+  rintro ⟨P', rfl, H⟩
+  rename Prop => P'
+  exists P'
+
 theorem dist.trans {n : Nat} {f f' f'' : cif FF}
     (H1 : dist n f f') (H2 : dist n f' f'') : dist n f f'' := by
-  induction H1 with
+  induction H1 generalizing f'' with
   | bin heq Hdist1 Hdist2 =>
     cases H2 with | bin heq' Hdist1'
-    apply (dist.bin (heq.trans heq')); assumption
+    apply (dist.bin (heq.trans heq'))
+    (expose_names; exact a_ih Hdist1')
+    (expose_names; exact a_ih_1 h)
   | un heq Hdist =>
     cases H2 with | un heq' Hdist'
     apply (dist.un (heq.trans heq')); (expose_names; exact a_ih Hdist')
@@ -150,10 +171,8 @@ theorem dist.trans {n : Nat} {f f' f'' : cif FF}
     cases H2 with | ex hdist'
     apply dist.ex; intro a; (expose_names; exact a_ih a (hdist' a))
   | pure heq =>
-    sorry
-    -- cases hyz with | pure heq'
-    -- apply (@dist.pure _ _ P P'); exact
-    --  rename_i P P'; apply (@dist.pure _ _ P P'); assumption
+    cases H2 with | pure heq'
+    apply dist.pure; apply heq.trans heq'
   | later Hdist =>
     cases H2 with | later Hdist'
     apply dist.later; apply Iris.OFE.DistLater.trans Hdist Hdist'
@@ -175,18 +194,15 @@ instance : Iris.OFE (cif FF) where
     intros n P Q m Hdist Hlt
     induction Hdist with
     | bin heq Hdist1 Hdist2 =>
-      apply (dist.bin heq)
-      apply Hdist2; all_goals assumption
-      <;> try assumption; apply Hdist2
+      apply (dist.bin heq) <;> assumption
     | un heq Hdist =>
-      apply (dist.un heq)
-      (expose_names; exact a_ih Hlt)
+      apply (dist.un heq) <;> assumption
     | all hdist =>
       apply dist.all; intro a
-      (expose_names; exact a_ih a Hlt)
+      (expose_names; exact a_ih a)
     | ex hdist =>
       apply dist.ex; intro a
-      (expose_names; exact a_ih a Hlt)
+      (expose_names; exact a_ih a)
     | pure heq =>
       rename_i P P'
       apply (@dist.pure _ _ P P' heq)
@@ -195,9 +211,8 @@ instance : Iris.OFE (cif FF) where
       apply Iris.OFE.DistLater.dist_lt Hdist (Nat.lt_trans Hlt' Hlt)
     | inv heq Hdist =>
       apply (dist.inv heq)
-      (expose_names; exact a_ih Hlt)
+      (expose_names; exact a_ih)
     | own heq =>
       apply dist.own; exact heq
-
 
 end cif

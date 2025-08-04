@@ -3,9 +3,9 @@ import Iris.Nola.Semantics
 import Iris.Nola.Notations
 import Iris.Nola.Inv
 
-inductive AProp FF : Bool -> Type _ where
+inductive AProp.{u} FF : Bool -> Type _ where
 | IProp (P : Iris.IProp FF) : AProp FF true
-| FProp (iP : Iris.IProp FF) (fP : cif FF) :
+| FProp (iP : Iris.IProp FF) (fP : cif.{u} FF) :
   (⊢ iprop(⟦ (fP) ⟧ ∗-∗ iP)) ->
   AProp FF false
 
@@ -25,6 +25,9 @@ def unguard : AProp FF b -> AProp FF true
 def to_Formula : AProp FF b -> cif FF := fun P =>
 match P.guard with
 | FProp _ fP _ => fP
+
+def of_Formula (F : cif.{u} FF) : AProp.{u} FF false :=
+  FProp iprop(⟦ F ⟧) F (Iris.BI.wandIff_refl)
 
 /- Binary connectives -/
 
@@ -136,16 +139,31 @@ match b with
 def all_pred {A : Type} (Φ : A -> (∀ b, AProp FF b)) : AProp FF true :=
   IProp iprop(∀ a, (Φ a true).to_IProp)
 
-def sForall (Ψ : AProp.{u} FF false -> Prop) : AProp.{u+1} FF false :=
-  FProp iprop(∀ p, ⌜Ψ p⌝ → p.to_IProp) cif(∀ p, ⌜Ψ p⌝ → liftCif.{u,u+1} (p.to_Formula))
+def sForall (Ψ : AProp.{u+1} FF false -> Prop) : AProp.{u+1} FF false :=
+  FProp
+    iprop(∀ (p : cif.{u} FF), ⌜Ψ (AProp.of_Formula (liftCif.{u,u+1} p))⌝ → ⟦ p ⟧)
+    (cif.sForall.{u} (fun (p : cif.{u} FF) => Ψ (AProp.of_Formula (liftCif.{u,u+1} p))))
   (by
     simp [cif.sem, cif.sForall, cif.imp]
     apply Iris.BI.equiv_wandIff
-    apply Iris.BI.forall_congr
+    constructor <;> iintro H P HΨ
+    · ispecialize H P HΨ
+      istop; apply Iris.BI.entails_trans.trans Iris.BI.emp_sep.1
+      apply (cif.sem_lift _ _).1
+    · ispecialize H P HΨ
+      istop; apply Iris.BI.entails_trans.trans Iris.BI.emp_sep.1
+      apply (cif.sem_lift _ _).2)
+
+def sExists (Ψ : AProp.{u+1} FF false -> Prop) : AProp.{u+1} FF false :=
+  FProp iprop(∃ (p : cif.{u} FF), ⌜Ψ (AProp.of_Formula (liftCif.{u,u+1} p))⌝ ∧ ⟦ p ⟧)
+  (cif.sExists.{u} (fun (p : cif.{u} FF) => Ψ (AProp.of_Formula (liftCif.{u,u+1} p))))
+  (by
+    simp [cif.sem, cif.sExists, cif.and]
+    apply Iris.BI.equiv_wandIff
+    apply Iris.BI.exists_congr
     intro p
-    rcases p with _ | ⟨ iP, fP, HP ⟩; simp [to_Formula, to_IProp, guard]
-    apply Iris.BI.imp_congr_r;
-    apply Iris.BI.BiEntails.trans (cif.sem_lift FF fP); apply Iris.BI.wandIff_equiv HP)
+    apply Iris.BI.and_congr_r
+    apply cif.sem_lift)
 
 def ex {A : Type} {b} (Φ : A -> AProp FF b) : AProp FF b :=
 match b with
@@ -158,9 +176,6 @@ match b with
 
 def ex_pred {A : Type} (Φ : A -> (∀ b, AProp FF b)) : AProp FF true :=
   IProp iprop(∃ a, (Φ a true).to_IProp)
-
-def sExists (Ψ : ∀ b, AProp FF b -> Prop) : AProp FF true :=
-  IProp iprop(∃ a, iprop(⌜Ψ true a⌝))
 
 def ainv_tok {b} (N : Namespace) (P : AProp FF b) : AProp FF false :=
   FProp (inv_tok N P.to_Formula) (cif.inv N P.to_Formula) (by apply Iris.BI.wandIff_refl)
