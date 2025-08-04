@@ -6,7 +6,7 @@ import Iris.Nola.Inv
 inductive AProp FF : Bool -> Type _ where
 | IProp (P : Iris.IProp FF) : AProp FF true
 | FProp (iP : Iris.IProp FF) (fP : cif FF) :
-  (⊢ iprop(⟦ fP ⟧ ∗-∗ iP)) ->
+  (⊢ iprop(⟦ (fP) ⟧ ∗-∗ iP)) ->
   AProp FF false
 
 namespace AProp
@@ -136,8 +136,16 @@ match b with
 def all_pred {A : Type} (Φ : A -> (∀ b, AProp FF b)) : AProp FF true :=
   IProp iprop(∀ a, (Φ a true).to_IProp)
 
-def sForall (Ψ : ∀ b, AProp FF b -> Prop) : AProp FF true :=
-  IProp iprop(UPred.sFo)
+def sForall (Ψ : AProp.{u} FF false -> Prop) : AProp.{u+1} FF false :=
+  FProp iprop(∀ p, ⌜Ψ p⌝ → p.to_IProp) cif(∀ p, ⌜Ψ p⌝ → liftCif.{u,u+1} (p.to_Formula))
+  (by
+    simp [cif.sem, cif.sForall, cif.imp]
+    apply Iris.BI.equiv_wandIff
+    apply Iris.BI.forall_congr
+    intro p
+    rcases p with _ | ⟨ iP, fP, HP ⟩; simp [to_Formula, to_IProp, guard]
+    apply Iris.BI.imp_congr_r;
+    apply Iris.BI.BiEntails.trans (cif.sem_lift FF fP); apply Iris.BI.wandIff_equiv HP)
 
 def ex {A : Type} {b} (Φ : A -> AProp FF b) : AProp FF b :=
 match b with

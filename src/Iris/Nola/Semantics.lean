@@ -35,7 +35,7 @@ def cif.sem {FF} (s : cif FF) : Iris.IProp FF :=
   | .inv N F => inv_tok N F
   | cif.own a => Iris.own a
 
-instance cif_inhabited : Inhabited (cif FF) where
+instance cif.inhabited : Inhabited (cif FF) where
   default := cif.pure True
 
 syntax (name := sem) "⟦" (term:arg) "⟧" : term
@@ -47,6 +47,57 @@ delab_rule cif.sem
   | `($_ $f) => ``(⟦$f⟧)
 
 @[simp]
-theorem cif_wandiff_sem (P Q : @cif.{u1} FF) :
+theorem cif.wandiff_sem (P Q : @cif.{u1} FF) :
   ⟦ cif(P ∗-∗ Q) ⟧ = iprop(⟦ P ⟧ ∗-∗ ⟦ Q ⟧) := by
   simp [cif.wandIff, cif.sem]
+
+@[simp]
+theorem cif.sem_lift (fP : cif FF) :
+  ⟦(liftCif fP)⟧ ⊣⊢ ⟦ fP ⟧ := by
+  induction fP with
+  | all Φ ih =>
+    simp_all [cif.sem, liftCif]
+    constructor
+    · iintro Hlift a; ispecialize Hlift (ULift.up a)
+      istop; apply Iris.BI.entails_trans.trans Iris.BI.emp_sep.1
+      apply (ih a).1
+    · iintro HΦ a; ispecialize HΦ (a.down)
+      istop; apply Iris.BI.entails_trans.trans Iris.BI.emp_sep.1
+      apply (ih a.down).2
+  | ex Φ ih =>
+    simp_all [cif.sem, liftCif]
+    constructor
+    · iintro ⟨a, Hlift⟩; iexists (a.down)
+      istop
+      apply (ih a.down).1
+    · iintro ⟨a, HΦ⟩; iexists (ULift.up a); istop
+      apply (ih a).2
+  | bin s P Q ihP ihQ =>
+    simp_all [cif.sem, liftCif]
+    cases s <;> simp []
+    · apply Iris.BI.and_congr ihP ihQ
+    · apply Iris.BI.or_congr ihP ihQ
+    · apply Iris.BI.imp_congr ihP ihQ
+    · apply Iris.BI.sep_congr ihP ihQ
+    · apply Iris.BI.wand_congr ihP ihQ
+  | un s P ih =>
+    simp_all [cif.sem, liftCif]
+    cases s <;> simp []
+    · constructor <;> apply Iris.BIPlainly.mono
+      apply ih.1; apply ih.2
+    · apply persistently_congr ih
+    · constructor <;> apply Iris.BIUpdate.mono
+      apply ih.1; apply ih.2
+    · unfold BIBase.except0; apply Iris.BI.or_congr_r ih
+  | pure φ =>
+    simp_all [cif.sem, liftCif]
+  | later P =>
+    simp_all [cif.sem, liftCif]
+  | inv N F =>
+    simp_all [cif.sem, liftCif]
+    unfold inv_tok
+    apply Iris.BI.exists_congr; intro i
+    apply Iris.BI.sep_congr_r
+    apply sinv_tok_lift
+  | own a =>
+    simp_all [cif.sem, liftCif]

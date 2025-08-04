@@ -59,21 +59,23 @@ def pers (P : cif FF) : cif FF := cif.un unsel.pers P
 def bupd (P : cif FF) : cif FF := cif.un unsel.bupd P
 def except0 (P : cif FF) : cif FF := cif.un unsel.except0 P
 
-def and.{u, v} (P : cif.{u} FF) (Q : cif.{v} FF) : cif.{max u v} FF :=
+def and (P Q : cif FF) : cif FF := bin cif.binsel.and P Q
+def and_lift.{u, v} (P : cif.{u} FF) (Q : cif.{v} FF) : cif.{max u v} FF :=
   bin cif.binsel.and (liftCif P) (liftCif Q)
 
 def or (P Q : cif FF) : cif FF := cif.bin binsel.or P Q
 
-def imp.{u, v} (P : cif.{u} FF) (Q : cif.{v} FF) : cif.{max u v} FF :=
+def imp (P Q : cif FF) : cif FF := bin cif.binsel.imp P Q
+def imp_lift.{u, v} (P : cif.{u} FF) (Q : cif.{v} FF) : cif.{max u v} FF :=
   bin cif.binsel.imp (liftCif P) (liftCif Q)
 
 def sep (P Q : cif FF) : cif FF := cif.bin binsel.sep P Q
 def wand (P Q : cif FF) : cif FF := cif.bin binsel.wand P Q
 
 def sForall.{u} (Φ : cif.{u} FF → Prop) : cif.{u + 1} FF :=
-  all (fun (p : cif FF) => imp.{u + 1, u} (pure (Φ p)) p)
+  all (fun (p : cif FF) => imp_lift.{u + 1, u} (pure (Φ p)) p)
 def sExists (Φ : cif.{u} FF → Prop) : cif.{u + 1} FF :=
-  ex (fun p => and.{u + 1, u} (pure (Φ p)) p)
+  ex (fun p => and_lift.{u + 1, u} (pure (Φ p)) p)
 
 def all' {α} (P : α → cif FF) : cif FF := sForall (fun p => ∃ a, P a = p)
 def ex' {α} (P : α → cif FF) : cif FF := sExists (fun p => ∃ a, P a = p)
