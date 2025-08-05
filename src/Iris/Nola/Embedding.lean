@@ -143,27 +143,28 @@ def sForall (Ψ : AProp.{u+1} FF false -> Prop) : AProp.{u+1} FF false :=
   FProp
     iprop(∀ (p : cif.{u} FF), ⌜Ψ (AProp.of_Formula (liftCif.{u,u+1} p))⌝ → ⟦ p ⟧)
     (cif.sForall.{u} (fun (p : cif.{u} FF) => Ψ (AProp.of_Formula (liftCif.{u,u+1} p))))
-  (by
-    simp [cif.sem, cif.sForall, cif.imp]
-    apply Iris.BI.equiv_wandIff
-    constructor <;> iintro H P HΨ
-    · ispecialize H P HΨ
-      istop; apply Iris.BI.entails_trans.trans Iris.BI.emp_sep.1
-      apply (cif.sem_lift _ _).1
-    · ispecialize H P HΨ
-      istop; apply Iris.BI.entails_trans.trans Iris.BI.emp_sep.1
-      apply (cif.sem_lift _ _).2)
+    (by
+      simp [cif.sem, cif.sForall, cif.imp]
+      apply Iris.BI.equiv_wandIff
+      constructor <;> iintro H P HΨ
+      · ispecialize H P HΨ
+        istop; apply Iris.BI.entails_trans.trans Iris.BI.emp_sep.1
+        apply (cif.sem_lift _ _).1
+      · ispecialize H P HΨ
+        istop; apply Iris.BI.entails_trans.trans Iris.BI.emp_sep.1
+        apply (cif.sem_lift _ _).2)
 
 def sExists (Ψ : AProp.{u+1} FF false -> Prop) : AProp.{u+1} FF false :=
-  FProp iprop(∃ (p : cif.{u} FF), ⌜Ψ (AProp.of_Formula (liftCif.{u,u+1} p))⌝ ∧ ⟦ p ⟧)
-  (cif.sExists.{u} (fun (p : cif.{u} FF) => Ψ (AProp.of_Formula (liftCif.{u,u+1} p))))
-  (by
-    simp [cif.sem, cif.sExists, cif.and]
-    apply Iris.BI.equiv_wandIff
-    apply Iris.BI.exists_congr
-    intro p
-    apply Iris.BI.and_congr_r
-    apply cif.sem_lift)
+  FProp
+    iprop(∃ (p : cif.{u} FF), ⌜Ψ (AProp.of_Formula (liftCif.{u,u+1} p))⌝ ∧ ⟦ p ⟧)
+    (cif.sExists.{u} (fun (p : cif.{u} FF) => Ψ (AProp.of_Formula (liftCif.{u,u+1} p))))
+    (by
+      simp [cif.sem, cif.sExists, cif.and]
+      apply Iris.BI.equiv_wandIff
+      apply Iris.BI.exists_congr
+      intro p
+      apply Iris.BI.and_congr_r
+      apply cif.sem_lift)
 
 def ex {A : Type} {b} (Φ : A -> AProp FF b) : AProp FF b :=
 match b with
