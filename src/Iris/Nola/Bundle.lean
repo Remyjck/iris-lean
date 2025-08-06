@@ -6,6 +6,8 @@ structure aProp (FF : Iris.GFunctors) where
   tag : Bool
   car : AProp FF tag
 
+instance : Nonempty (aProp FF) := ⟨⟨false, AProp.pure True⟩⟩
+
 /- OFE Instance -/
 
 abbrev OFEUPred {FF} := @Iris.instOFEUPred FF
@@ -49,10 +51,14 @@ protected def or (P Q : aProp FF) : aProp FF :=
 protected def imp (P Q : aProp FF) : aProp FF :=
   ⟨ P.tag || Q.tag, AProp.imp P.car Q.car ⟩
 
-set_option pp.universes true
+protected noncomputable def sForall.{u} (Ψ : aProp.{u + 1} FF -> Prop) : aProp.{u + 1} FF :=
+  ⟨ true, AProp.sForall'' (fun b (P : AProp FF b) => Ψ ⟨ b, P ⟩) ⟩
+  -- ⟨ (Classical.epsilon Ψ).tag,
+  --   match (Classical.epsilon Ψ).tag with
+  --   | true => AProp.sForall' (fun p => Ψ { tag := true, car := p })
+  --   | false => AProp.sForall (fun p => Ψ {tag := false, car := p})⟩
 
-protected def sForall.{u} (Ψ : aProp.{u + 1} FF -> Prop) : aProp.{u + 1} FF :=
-  ⟨ false, AProp.sForall (fun p => Ψ { tag := false, car := p }) ⟩
+noncomputable def all {α : Sort _} (P : α → aProp FF) : aProp FF := aProp.sForall (fun p => ∃ a, P a = p)
 
 protected def sExists (Ψ : aProp FF -> Prop) : aProp FF :=
   ⟨ false, AProp.sExists (fun p => Ψ { tag := false, car := p }) ⟩
@@ -63,11 +69,17 @@ protected def sep (P Q : aProp FF) : aProp FF :=
 protected def wand (P Q : aProp FF) : aProp FF :=
   ⟨ P.tag || Q.tag, AProp.wand P.car Q.car ⟩
 
+protected def plainly (P : aProp FF) : aProp FF :=
+  ⟨ P.tag, AProp.plainly P.car ⟩
+
 protected def persistently (P : aProp FF) : aProp FF :=
   ⟨ P.tag, AProp.persistently P.car ⟩
 
 protected def later (P : aProp FF) : aProp FF :=
   ⟨ false, AProp.later P.car ⟩
+
+def bupd (P : aProp FF) : aProp FF :=
+  ⟨ P.tag, AProp.bupd P.car ⟩
 
 protected def emp : aProp FF := aProp.pure True
 
@@ -75,7 +87,7 @@ end bidefs
 
 open Iris BI
 
-instance aPropBase : BIBase.{u + 2} (aProp.{u+1} FF) where
+noncomputable instance aPropBase : BIBase.{u + 2} (aProp.{u+1} FF) where
   Entails      := aProp.Entails
   emp          := aProp.emp
   pure         := aProp.pure
@@ -386,6 +398,28 @@ theorem equiv_iff {P Q : aProp FF} :
     simp []
     apply (Entails_UPredEntails P Q).2 Hentails
 
+theorem sForall_intro {P : aProp FF} {Ψ : aProp FF → Prop} :
+  (∀ (p : aProp FF), Ψ p → P ⊢ p) → P ⊢ sForall Ψ := by
+  intro H
+  apply Entail_UPredEntail.1
+  simp_all [sForall, aProp.sForall, AProp.sForall', cif.sForall, AProp.to_IProp]
+  apply UPred.instBIUPred.sForall_intro
+  intro p HΨ
+  specialize H ⟨ true, (AProp.IProp p) ⟩ HΨ
+  replace H := Entail_UPredEntail.2 H
+  simp [AProp.to_IProp, AProp.of_Formula] at H
+  apply Iris.BI.entails_trans.trans H
+  apply Iris.BI.entails_preorder.refl
+
+theorem sForall_elim {p : aProp.{u + 1} FF} {Ψ : aProp.{u+1} FF → Prop} :
+  Ψ p → sForall.{u + 2} Ψ ⊢ p := by
+  intro HΨ
+  apply Entail_UPredEntail.1
+  simp_all [sForall, aProp.sForall, AProp.sForall', cif.sForall, AProp.to_IProp]
+  iintro Himp
+  apply UPred.instBIUPred.sForall_elim
+
+
 instance : BI.{u+2} (aProp.{u+1} FF) where
   entails_preorder := entails_preorder
   equiv_iff {P Q} := aProp.equiv_iff
@@ -409,7 +443,7 @@ instance : BI.{u+2} (aProp.{u+1} FF) where
   or_elim := aProp.or_elim
   imp_intro := aProp.imp_intro
   imp_elim := aProp.imp_elim
-  sForall_intro := sorry
+  sForall_intro := sForall_intro
   sForall_elim := sorry
   sExists_intro := sorry
   sExists_elim := sorry
@@ -433,5 +467,56 @@ instance : BI.{u+2} (aProp.{u+1} FF) where
   later_sep := aProp.later_sep
   later_persistently := aProp.later_persistently
   later_false_em := aProp.later_false_em
+
+instance : BILaterContractive (aProp FF) where
+  toContractive := later_contractive
+
+instance (P : aProp FF) : Affine P where
+  affine := by
+    apply Entail_UPredEntail.1
+    rcases P with ⟨ _, ⟨_, _⟩⟩ <;>
+    apply UPred.instBIUPred.affine
+
+instance : OFE.NonExpansive (bupd : aProp FF -> aProp FF) where
+  ne := by
+    intros n P Q H
+    rcases P with ⟨b₁, ⟨_,_⟩⟩ <;> rcases Q with ⟨b₂,  ⟨_,_⟩⟩ <;>
+    simp [bupd, OFE.Dist] <;>
+    apply UPred.instNonExpansiveUPredBupd.ne (n := n) H
+
+instance : Plainly (aProp FF) := ⟨aProp.plainly⟩
+
+instance : OFE.NonExpansive (plainly : aProp FF -> aProp FF) where
+  ne := by
+    intros n P Q H
+    rcases P with ⟨b₁, ⟨_,_⟩⟩ <;> rcases Q with ⟨b₂,  ⟨_,_⟩⟩ <;>
+    simp [aProp.plainly, OFE.Dist] <;>
+    apply UPred.instNonExpansiveUPredPlainly.ne (n := n) H
+
+instance : BIPlainly (aProp FF) where
+  mono := by
+    intros P Q H
+    rcases P with ⟨b₁, ⟨_,_⟩⟩ <;> rcases Q with ⟨b₂,  ⟨_,_⟩⟩ <;>
+    apply UPred.instBIPlainlyUPred.mono H
+  elim_persistently {P} := by
+    rcases P with ⟨b, ⟨_,_⟩⟩ <;>
+    apply UPred.instBIPlainlyUPred.elim_persistently
+  idem {P} := by
+    rcases P with ⟨b, ⟨_,_⟩⟩ <;>
+    apply UPred.instBIPlainlyUPred.idem
+  plainly_sForall_2 := sorry
+  plainly_impl_plainly := by
+    intros P Q H
+    rcases P with ⟨b₁, ⟨_,_⟩⟩ <;> rcases Q with ⟨b₂,  ⟨_,_⟩⟩ <;>
+    apply UPred.instBIPlainlyUPred.plainly_impl_plainly H
+  emp_intro _ _ _ _ := trivial
+  plainly_absorb := sep_elim_l
+  later_plainly := by
+    intros P
+    rcases P with ⟨b₁, ⟨_,_⟩⟩ <;>
+    simp [BI.later, aProp.later, AProp.later, plainly, aProp.plainly, AProp.plainly] <;>
+    apply UPred.instBIPlainlyUPred.later_plainly
+
+instance : BUpd (aProp FF) := ⟨bupd⟩
 
 end aProp
