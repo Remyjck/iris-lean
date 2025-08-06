@@ -14,6 +14,9 @@ section sinv
 
 axiom sinv_tok (i : Pos) (F : cif FF) : Iris.IProp FF
 
+axiom sinv_tok_lift (i : Pos) (F : cif FF) :
+  sinv_tok i (liftCif F) ⊣⊢ sinv_tok i F
+
 axiom sinv_auth_tok (M : List (cif FF)) : Iris.IProp FF
 
 def sinv_wsat (sm : cif FF -> Iris.IProp FF) : Iris.IProp FF :=
