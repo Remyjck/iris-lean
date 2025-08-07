@@ -45,6 +45,9 @@ macro_rules
   | `(cif($P ∗-∗ $Q)) => ``(cif.wandIff cif($P) cif($Q))
   | `(cif(<pers> $P)) => ``(cif.pers cif($P))
   | `(cif(▷ $P))      => ``(cif.later cif($P))
+  | `(cif(|==> $P))  => ``(cif.bupd iprop($P))
+  | `(cif($P ==∗ $Q))  => ``(cif.wand iprop($P) (cif.bupd iprop($Q)))
+  | `(cif(■ $P))  => ``(cif.plain iprop($P))
 
 delab_rule cif.pure
   | `($_ $φ) => ``(cif(⌜$φ⌝))
@@ -70,6 +73,10 @@ delab_rule cif.wandIff
   | `($_ $P $Q) => do ``(cif($(← unpackCif P) ∗-∗ $(← unpackCif Q)))
 delab_rule cif.pers
   | `($_ $P) => do ``(cif(<pers> $(← unpackCif P)))
+delab_rule cif.bupd
+  | `($_ $P) => do ``(cif(|==> $(← unpackCif P)))
+delab_rule cif.plain
+  | `($_ $P) => do ``(cif(■ $(← unpackCif P)))
 
 delab_rule cif.pure
   | `($_ True) => ``(cif($(mkIdent `True)))

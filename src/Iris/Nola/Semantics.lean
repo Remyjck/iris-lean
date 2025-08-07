@@ -101,3 +101,7 @@ theorem cif.sem_lift (fP : cif FF) :
     apply sinv_tok_lift
   | own a =>
     simp_all [cif.sem, liftCif]
+
+-- noncomputable def sForall.{u} (Φ : cif.{u} FF → Prop) : cif.{u} FF :=
+--   Classical.epsilon (fun p =>
+--     ∃ (A : Type) (a : A) (P : A -> cif.{u} FF), Φ p = (⊢ ⟦ (P a) ⟧))
