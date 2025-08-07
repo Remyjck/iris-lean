@@ -35,6 +35,7 @@ def cif.sem {FF} (s : cif FF) : Iris.IProp FF :=
   | .inv N F => inv_tok N F
   | cif.own a => Iris.own a
 
+
 instance cif.inhabited : Inhabited (cif FF) where
   default := cif.pure True
 
@@ -50,6 +51,19 @@ delab_rule cif.sem
 theorem cif.wandiff_sem (P Q : @cif.{u1} FF) :
   ⟦ cif(P ∗-∗ Q) ⟧ = iprop(⟦ P ⟧ ∗-∗ ⟦ Q ⟧) := by
   simp [cif.wandIff, cif.sem]
+
+@[simp]
+theorem sem_and (P Q : cif FF) : ⟦cif(P ∧ Q)⟧ = iprop(⟦P⟧ ∧ ⟦Q⟧) := rfl
+@[simp]
+theorem sem_or (P Q : cif FF) : ⟦cif(P ∨ Q)⟧ = iprop(⟦P⟧ ∨ ⟦Q⟧) := rfl
+@[simp]
+theorem sem_imp (P Q : cif FF) : ⟦cif(P → Q)⟧ = iprop(⟦P⟧ → ⟦Q⟧) := rfl
+@[simp]
+theorem sem_sep (P Q : cif FF) : ⟦cif(P ∗ Q)⟧ = iprop(⟦P⟧ ∗ ⟦Q⟧) := rfl
+@[simp]
+theorem sep_wand (P Q : cif FF) : ⟦cif(P -∗ Q)⟧ = iprop(⟦P⟧ -∗ ⟦Q⟧) := rfl
+@[simp]
+theorem sep_persistently (P : cif FF) : ⟦cif(<pers> P)⟧ = iprop(<pers> ⟦P⟧) := rfl
 
 @[simp]
 theorem cif.sem_lift (fP : cif FF) :

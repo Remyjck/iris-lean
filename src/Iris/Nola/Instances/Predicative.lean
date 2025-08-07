@@ -429,7 +429,7 @@ theorem sForall_elim {p : aProp.{u + 1} FF} {Ψ : aProp.{u+1} FF → Prop} :
   specialize he ⟨fP, ⟨ Iris.BI.wandIff_refl, HΨ⟩⟩
   exact (Iris.BI.wandIff_equiv he.1).1
 
-instance : BI.{u+2} (aProp.{u+1} FF) where
+noncomputable instance : BI.{u+2} (aProp.{u+1} FF) where
   entails_preorder := entails_preorder
   equiv_iff {P Q} := aProp.equiv_iff
   and_ne.ne n P P' H Q Q' H' := aProp.and_ne H H'
@@ -453,7 +453,7 @@ instance : BI.{u+2} (aProp.{u+1} FF) where
   imp_intro := aProp.imp_intro
   imp_elim := aProp.imp_elim
   sForall_intro := sForall_intro
-  sForall_elim := sorry
+  sForall_elim := sForall_elim
   sExists_intro := sorry
   sExists_elim := sorry
   sep_mono := aProp.sep_mono
@@ -502,7 +502,7 @@ instance : OFE.NonExpansive (plainly : aProp FF -> aProp FF) where
     simp [aProp.plainly, OFE.Dist] <;>
     apply UPred.instNonExpansiveUPredPlainly.ne (n := n) H
 
-instance : BIPlainly (aProp FF) where
+noncomputable instance : BIPlainly (aProp FF) where
   mono := by
     intros P Q H
     rcases P with ⟨b₁, ⟨_,_⟩⟩ <;> rcases Q with ⟨b₂,  ⟨_,_⟩⟩ <;>
@@ -524,6 +524,7 @@ instance : BIPlainly (aProp FF) where
     intros P
     rcases P with ⟨b₁, ⟨_,_⟩⟩ <;>
     simp [BI.later, aProp.later, AProp.later, plainly, aProp.plainly, AProp.plainly] <;>
+    apply (Entails_UPredEntails _ _).1
     apply UPred.instBIPlainlyUPred.later_plainly
 
 instance : BUpd (aProp FF) := ⟨bupd⟩
