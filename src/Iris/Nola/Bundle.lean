@@ -415,9 +415,20 @@ theorem sForall_elim {p : aProp.{u + 1} FF} {Ψ : aProp.{u+1} FF → Prop} :
   Ψ p → sForall.{u + 2} Ψ ⊢ p := by
   intro HΨ
   apply Entail_UPredEntail.1
-  simp_all [sForall, aProp.sForall, AProp.sForall', cif.sForall, AProp.to_IProp]
+  simp_all [sForall, aProp.sForall, AProp.sForall'', cif.sForall, AProp.to_IProp]
   iintro Himp
-  apply UPred.instBIUPred.sForall_elim
+  simp [UPred.sForall]
+  rcases p with ⟨_, ⟨_,_⟩⟩ <;> simp []
+  · simp [ProofMode.Entails', BI.Entails, UPred.Entails]
+    intros n x Hvalid Hp
+    specialize (Hp _ HΨ)
+    apply Hp
+  · simp [ProofMode.Entails', BI.Entails, UPred.Entails]
+    intros n x Hvalid Hp
+    specialize (Hp _ HΨ)
+    apply Hp
+  apply HΨ
+
 
 
 instance : BI.{u+2} (aProp.{u+1} FF) where
