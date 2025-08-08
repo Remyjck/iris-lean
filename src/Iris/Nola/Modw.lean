@@ -157,33 +157,25 @@ namespace bupdw0
 theorem bupdw_0_incl_bupd [BI PROP] [BIUpdate PROP] {W W' P : PROP} :
   ⊢ (W ==∗◇ W' ∗ (W' ==∗◇ W)) -∗ (|=[W']=>◇ P) =[W]=∗◇ P := by
   simp [bupdw, modw]
-  iintro f P' W; istop
+  iintro f P' W; ispecialize f W; istop
+  apply entails_trans.trans (bupd_frame_l)
   apply entails_trans.trans _ (bupd_idem.1)
-  apply entails_trans.trans (sep_comm.1)
-  apply entails_trans.trans (sep_assoc.2)
-  apply entails_trans.trans; apply sep_mono_l; apply wand_elim_r
-  apply entails_trans.trans (BIUpdate.frame_r)
   apply BIUpdate.mono
-  iintro ⟨ ⟨Hw', Hw⟩, Himp ⟩
+  iintro ⟨ Hw, ⟨Hw', Himp⟩⟩
   unfold BI.BIBase.except0
   icases Hw' with ⟨ HF | Hw' ⟩
-  · istop;
-    apply entails_trans.trans (BIUpdate.intro)
+  · apply entails_trans.trans BIUpdate.intro
     apply BIUpdate.mono
     iintro ⟨ _, HF ⟩; ileft; iexact HF
-  · istop
-    apply entails_trans.trans (sep_assoc.1)
-    apply entails_trans.trans (sep_comm.1)
-    apply entails_trans.trans; apply sep_mono_l; apply wand_elim_l
-    apply entails_trans.trans _ (bupd_idem.1)
+  · ispecialize Hw Hw'
     simp [bupd0, relax0]
-    apply entails_trans.trans (BIUpdate.frame_r)
+    apply entails_trans.trans (bupd_frame_l)
+    apply entails_trans.trans _ (bupd_idem.1)
     apply BIUpdate.mono
-    iintro ⟨ Hw', Himp ⟩
+    iintro ⟨ Himp, Hw' ⟩
     unfold BI.BIBase.except0
     icases Hw' with ⟨ HF | ⟨Hw', Hp⟩ ⟩
-    · istop;
-      apply entails_trans.trans (BIUpdate.intro)
+    · apply entails_trans.trans (BIUpdate.intro)
       apply BIUpdate.mono
       iintro ⟨ _, HF ⟩; ileft; iexact HF
     · ispecialize Himp Hw'
