@@ -25,8 +25,8 @@ instance : Iris.OFE.{u + 1} (aProp FF) where
 instance : Iris.IsCOFE.{u + 1} (aProp.{u} FF) where
   compl := fun c => by
     have ic' : Iris.Chain (Iris.IProp FF) := ⟨ fun n => (c n).to_IProp, c.cauchy ⟩
-    have fc' : Iris.Chain (cif.{u} FF) := ⟨ fun n => (c n).to_Formula, sorry ⟩
-    refine (AProp.FProp (COFEUPred.compl ic') (cif.instIsCOFE.compl fc') ?_)
+    have fc' : Iris.Chain (Fml.{u} FF) := ⟨ fun n => (c n).to_Formula, sorry ⟩
+    refine (AProp.FProp (COFEUPred.compl ic') (Fml.instIsCOFE.compl fc') ?_)
     sorry
   conv_compl {n c} := by apply COFEUPred.conv_compl
 
@@ -128,7 +128,22 @@ theorem sForall_ne {n : Nat} {Ψ₁ Ψ₂ : aProp FF → Prop} :
   liftRel (fun x1 x2 => x1 ≡{n}≡ x2) Ψ₁ Ψ₂ →
   ∀ (n' : Nat) (x' : IResUR FF),
   n' ≤ n → ✓{n'} x' → ((sForall Ψ₁).to_IProp.holds n' x' ↔ (sForall Ψ₂).to_IProp.holds n' x') := by
-  sorry
+  intros Hliftrel
+  simp [BI.sForall, aProp.sForall]
+  apply (Dist_UPredDist _ _).1
+  simp [AProp.sForall, AProp.to_IProp, AProp.Fml.sForall, Fml.sem]
+  apply UPred.instBIUPred.sForall_ne
+  simp_all [liftRel, AProp.of_Formula]
+  rcases Hliftrel with ⟨HΨ1, HΨ2⟩
+  constructor
+  · intros P
+    exists iprop(⌜(⊢ ⟦(Classical.epsilon fun fp => (⊢ ⟦fp⟧ ∗-∗ P.down) ∧ Ψ₂ (AProp.of_Formula fp))⟧ ∗-∗ P.down) ∧
+                Ψ₂ (AProp.of_Formula (Classical.epsilon fun fp => (⊢ ⟦fp⟧ ∗-∗ P.down) ∧ Ψ₂ (AProp.of_Formula fp)))⌝ →
+            ⟦(Classical.epsilon fun fp => (⊢ ⟦fp⟧ ∗-∗ P.down) ∧ Ψ₂ (AProp.of_Formula fp))⟧)
+    constructor
+    · exists P
+    · sorry
+  · sorry
 
 theorem sExists_ne {n : Nat} {Ψ₁ Ψ₂ : aProp FF → Prop} :
   liftRel (fun x1 x2 => x1 ≡{n}≡ x2) Ψ₁ Ψ₂ →
@@ -388,9 +403,9 @@ theorem sForall_intro {P : aProp FF} {Ψ : aProp FF → Prop} :
   (∀ (p : aProp FF), Ψ p → P ⊢ p) → P ⊢ sForall.{u + 2} Ψ := by
   intro H
   apply Entail_UPredEntail.1
-  simp_all [sForall, aProp.sForall, AProp.sForall', cif.sForall, AProp.to_IProp]
+  simp_all [sForall, aProp.sForall, AProp.sForall', Fml.sForall, AProp.to_IProp]
   cases P with | FProp fP
-  simp [AProp.sForall, AProp.cif.sForall, cif.sem, cif.imp]
+  simp [AProp.sForall, AProp.Fml.sForall, Fml.sem, Fml.imp]
   iintro iP P ⟨%HΨ1, %HΨ2⟩
   specialize H
     (AProp.of_Formula (Classical.epsilon fun fp => (⊢ ⟦fp⟧ ∗-∗ P.down) ∧ Ψ (AProp.of_Formula fp)))
@@ -399,8 +414,8 @@ theorem sForall_intro {P : aProp FF} {Ψ : aProp FF → Prop} :
   simp [AProp.to_IProp, AProp.of_Formula] at H
   apply H
 
-example (P : cif FF → Prop) :
-  (∀ (p : cif FF), P p) ↔ (∀ (p : Iris.IProp FF) (fp : cif FF), (⊢ iprop(⟦ (fp) ⟧ ∗-∗ p)) → P fp) := by
+example (P : Fml FF → Prop) :
+  (∀ (p : Fml FF), P p) ↔ (∀ (p : Iris.IProp FF) (fp : Fml FF), (⊢ iprop(⟦ (fp) ⟧ ∗-∗ p)) → P fp) := by
   constructor
   . simp +contextual
   . intros h fp
@@ -411,9 +426,9 @@ theorem sForall_elim {p : aProp.{u + 1} FF} {Ψ : aProp.{u+1} FF → Prop} :
   Ψ p → sForall.{u + 2} Ψ ⊢ p := by
   intro HΨ
   apply Entail_UPredEntail.1
-  simp_all [sForall, aProp.sForall, AProp.sForall, cif.sForall, AProp.to_IProp]
+  simp_all [sForall, aProp.sForall, AProp.sForall, Fml.sForall, AProp.to_IProp]
   cases p with | FProp fP
-  simp [AProp.sForall, AProp.cif.sForall, cif.sem, cif.imp]
+  simp [AProp.sForall, AProp.Fml.sForall, Fml.sem, Fml.imp]
   iintro H; ispecialize H (ULift.up ⟦fP⟧); simp []
   istop
   apply Iris.BI.entails_trans.trans Iris.BI.emp_sep.1

@@ -2,133 +2,133 @@ import Iris.BI
 import Iris.Algebra.Own
 import Iris.Std.Namespaces
 
-inductive cif.binsel where
+inductive Fml.binsel where
 | /- Conjunction -/ and
 | /- Disjunction -/ or
 | /- Implication -/ imp
 | /- Separating conjunction -/ sep
 | /- Magic wand -/ wand
 
-inductive cif.unsel where
+inductive Fml.unsel where
 | /- Plainly -/ plain
 | /- Persistently -/ pers
 | /- Basic update -/ bupd
 | /- Except-0 -/ except0
 
-inductive cif.{u} (FF : Iris.GFunctors) : Type (u + 1) where
-| all {A : Type u} (Φ : A → cif FF)
-| ex  {A : Type u} (Φ : A → cif FF)
-| bin (s : cif.binsel) (P : cif FF) (Q : cif FF)
-| un  (s : cif.unsel) (P : cif FF)
+inductive Fml.{u} (FF : Iris.GFunctors) : Type (u + 1) where
+| all {A : Type u} (Φ : A → Fml FF)
+| ex  {A : Type u} (Φ : A → Fml FF)
+| bin (s : Fml.binsel) (P : Fml FF) (Q : Fml FF)
+| un  (s : Fml.unsel) (P : Fml FF)
 | pure (P : Prop)
 | later (iP : Iris.IProp FF)
-| inv (N : Namespace) (fml : cif FF)
+| inv (N : Namespace) (fml : Fml FF)
 | own {A : Type} [Iris.CMRA A] [inG FF A] (a : A)
 
-instance : Nonempty (cif FF) := ⟨ cif.pure True ⟩
+instance : Nonempty (Fml FF) := ⟨ Fml.pure True ⟩
 
-def liftCif.{u, v} (P : cif.{u} FF) : cif.{max u v} FF :=
+def liftFml.{u, v} (P : Fml.{u} FF) : Fml.{max u v} FF :=
   match P with
-  | @cif.all _ A Φ =>
+  | @Fml.all _ A Φ =>
       -- We need to lift the domain type A from Type u to Type (max u v)
-      cif.all (fun (a : ULift.{max u v, u} A) => liftCif (Φ a.down))
-  | @cif.ex _ A Φ =>
-      cif.ex (fun (a : ULift.{max u v, u} A) => liftCif (Φ a.down))
-  | cif.bin s P Q =>
-      cif.bin s (liftCif P) (liftCif Q)
-  | cif.un s P =>
-      cif.un s (liftCif P)
-  | cif.pure P =>
-      cif.pure P
-  | cif.later iP =>
-      cif.later iP
-  | cif.inv N fml =>
-      cif.inv N (liftCif fml)
-  | cif.own a =>
-      cif.own a
+      Fml.all (fun (a : ULift.{max u v, u} A) => liftFml (Φ a.down))
+  | @Fml.ex _ A Φ =>
+      Fml.ex (fun (a : ULift.{max u v, u} A) => liftFml (Φ a.down))
+  | Fml.bin s P Q =>
+      Fml.bin s (liftFml P) (liftFml Q)
+  | Fml.un s P =>
+      Fml.un s (liftFml P)
+  | Fml.pure P =>
+      Fml.pure P
+  | Fml.later iP =>
+      Fml.later iP
+  | Fml.inv N fml =>
+      Fml.inv N (liftFml fml)
+  | Fml.own a =>
+      Fml.own a
 
-namespace cif
+namespace Fml
 
-def wandIff {FF} (P Q : cif FF) : cif FF :=
-  cif.bin binsel.and
-    (cif.bin binsel.wand P Q)
-    (cif.bin binsel.wand Q P)
+def wandIff {FF} (P Q : Fml FF) : Fml FF :=
+  Fml.bin binsel.and
+    (Fml.bin binsel.wand P Q)
+    (Fml.bin binsel.wand Q P)
 
-def plain (P : cif FF) : cif FF := cif.un unsel.plain P
-def pers (P : cif FF) : cif FF := cif.un unsel.pers P
-def bupd (P : cif FF) : cif FF := cif.un unsel.bupd P
-def except0 (P : cif FF) : cif FF := cif.un unsel.except0 P
+def plain (P : Fml FF) : Fml FF := Fml.un unsel.plain P
+def pers (P : Fml FF) : Fml FF := Fml.un unsel.pers P
+def bupd (P : Fml FF) : Fml FF := Fml.un unsel.bupd P
+def except0 (P : Fml FF) : Fml FF := Fml.un unsel.except0 P
 
-def and (P Q : cif FF) : cif FF := bin cif.binsel.and P Q
-def and_lift.{u, v} (P : cif.{u} FF) (Q : cif.{v} FF) : cif.{max u v} FF :=
-  bin cif.binsel.and (liftCif P) (liftCif Q)
+def and (P Q : Fml FF) : Fml FF := bin Fml.binsel.and P Q
+def and_lift.{u, v} (P : Fml.{u} FF) (Q : Fml.{v} FF) : Fml.{max u v} FF :=
+  bin Fml.binsel.and (liftFml P) (liftFml Q)
 
-def or (P Q : cif FF) : cif FF := cif.bin binsel.or P Q
+def or (P Q : Fml FF) : Fml FF := Fml.bin binsel.or P Q
 
-def imp (P Q : cif FF) : cif FF := bin cif.binsel.imp P Q
-def imp_lift.{u, v} (P : cif.{u} FF) (Q : cif.{v} FF) : cif.{max u v} FF :=
-  bin cif.binsel.imp (liftCif P) (liftCif Q)
+def imp (P Q : Fml FF) : Fml FF := bin Fml.binsel.imp P Q
+def imp_lift.{u, v} (P : Fml.{u} FF) (Q : Fml.{v} FF) : Fml.{max u v} FF :=
+  bin Fml.binsel.imp (liftFml P) (liftFml Q)
 
-def sep (P Q : cif FF) : cif FF := cif.bin binsel.sep P Q
-def wand (P Q : cif FF) : cif FF := cif.bin binsel.wand P Q
+def sep (P Q : Fml FF) : Fml FF := Fml.bin binsel.sep P Q
+def wand (P Q : Fml FF) : Fml FF := Fml.bin binsel.wand P Q
 
 
 /- [∀ p, ⌜Φ p⌝ -> p] -/
-def sForall.{u} (Φ : cif.{u} FF → Prop) : cif.{u + 1} FF :=
-  all (fun (p : cif.{u} FF) =>
+def sForall.{u} (Φ : Fml.{u} FF → Prop) : Fml.{u + 1} FF :=
+  all (fun (p : Fml.{u} FF) =>
     imp
       (pure (Φ p))
-      (liftCif.{u,u+1} p))
+      (liftFml.{u,u+1} p))
 
 /- [∃ p, ⌜Φ p⌝ ∧ p] -/
-def sExists (Φ : cif.{u} FF → Prop) : cif.{u + 1} FF :=
+def sExists (Φ : Fml.{u} FF → Prop) : Fml.{u + 1} FF :=
   ex (fun p =>
     and
       (pure (Φ p))
-      (liftCif.{u,u+1} p))
+      (liftFml.{u,u+1} p))
 
-def all' {α} (P : α → cif FF) : cif FF := sForall (fun p => ∃ a, P a = p)
-def ex' {α} (P : α → cif FF) : cif FF := sExists (fun p => ∃ a, P a = p)
+def all' {α} (P : α → Fml FF) : Fml FF := sForall (fun p => ∃ a, P a = p)
+def ex' {α} (P : α → Fml FF) : Fml FF := sExists (fun p => ∃ a, P a = p)
 
-inductive dist {FF} : Nat -> cif FF -> cif FF -> Prop
-| bin : ∀ {n} {s s' : binsel} {P Q P' Q' : cif FF},
+inductive dist {FF} : Nat -> Fml FF -> Fml FF -> Prop
+| bin : ∀ {n} {s s' : binsel} {P Q P' Q' : Fml FF},
     s = s' ->
     dist n P P' ->
     dist n Q Q' ->
-    dist n (cif.bin s P Q) (cif.bin s' P' Q')
-| un : ∀ {n} {s s' : unsel} {P P' : cif FF},
+    dist n (Fml.bin s P Q) (Fml.bin s' P' Q')
+| un : ∀ {n} {s s' : unsel} {P P' : Fml FF},
     s = s' ->
     dist n P P' ->
-    dist n (cif.un s P) (cif.un s' P')
-| all : ∀ {n} {A : Type} {Φ Φ' : A -> cif FF},
+    dist n (Fml.un s P) (Fml.un s' P')
+| all : ∀ {n} {A : Type} {Φ Φ' : A -> Fml FF},
     (∀ a, dist n (Φ a) (Φ' a)) ->
-    dist n (cif.all Φ) (cif.all Φ')
-| ex : ∀ {n} {A : Type} {Φ Φ' : A -> cif FF},
+    dist n (Fml.all Φ) (Fml.all Φ')
+| ex : ∀ {n} {A : Type} {Φ Φ' : A -> Fml FF},
     (∀ a, dist n (Φ a) (Φ' a)) ->
-    dist n (cif.ex Φ) (cif.ex Φ')
+    dist n (Fml.ex Φ) (Fml.ex Φ')
 | pure : ∀ {n} {P P' : Prop},
     (P <-> P') ->
-    dist n (cif.pure P) (cif.pure P')
+    dist n (Fml.pure P) (Fml.pure P')
 | later : ∀ {n} {iP iP' : Iris.IProp FF},
     Iris.OFE.DistLater n iP iP' ->
-    dist n (cif.later iP) (cif.later iP')
-| inv : ∀ {n} {N N' : Namespace} {fml fml' : cif FF},
+    dist n (Fml.later iP) (Fml.later iP')
+| inv : ∀ {n} {N N' : Namespace} {fml fml' : Fml FF},
     (N = N') ->
     (dist n fml fml') ->
-    dist n (cif.inv N fml) (cif.inv N' fml')
+    dist n (Fml.inv N fml) (Fml.inv N' fml')
 | own : ∀ {n} {A : Type} [Iris.CMRA A] [inG FF A]
     {a a' : A},
     (a = a') ->
-    dist n (@cif.own _ A _ _ a) (@cif.own FF A _ _ a')
+    dist n (@Fml.own _ A _ _ a) (@Fml.own FF A _ _ a')
 
 @[refl]
-theorem dist.refl {n : Nat} {f : cif FF} : dist n f f := by
+theorem dist.refl {n : Nat} {f : Fml FF} : dist n f f := by
   induction f <;> try constructor <;> try assumption
   all_goals
     try rfl
 
 @[symm]
-theorem dist.symm {n : Nat} {f f' : cif FF} (H : dist n f f') : dist n f' f := by
+theorem dist.symm {n : Nat} {f f' : Fml FF} (H : dist n f f') : dist n f' f := by
   induction H with
   | bin heq Hdist1 Hdist2 =>
     apply (dist.bin (by symm; assumption)) <;> assumption
@@ -146,14 +146,14 @@ theorem dist.symm {n : Nat} {f f' : cif FF} (H : dist n f f') : dist n f' f := b
   | own heq =>
     apply dist.own; symm; assumption
 
-theorem pure_dist_inv (P : Prop) (f : cif FF) n :
-  dist n (cif.pure P) f ->
-  ∃ P', f = cif.pure P' ∧ (P <-> P') := by
+theorem pure_dist_inv (P : Prop) (f : Fml FF) n :
+  dist n (Fml.pure P) f ->
+  ∃ P', f = Fml.pure P' ∧ (P <-> P') := by
   rintro ⟨P', rfl, H⟩
   rename Prop => P'
   exists P'
 
-theorem dist.trans {n : Nat} {f f' f'' : cif FF}
+theorem dist.trans {n : Nat} {f f' f'' : Fml FF}
     (H1 : dist n f f') (H2 : dist n f' f'') : dist n f f'' := by
   induction H1 generalizing f'' with
   | bin heq Hdist1 Hdist2 =>
@@ -183,9 +183,9 @@ theorem dist.trans {n : Nat} {f f' f'' : cif FF}
     cases H2 with | own heq'
     apply dist.own (heq.trans heq')
 
-def equiv (f f' : cif FF) := ∀ n, dist n f f'
+def equiv (f f' : Fml FF) := ∀ n, dist n f f'
 
-instance : Iris.OFE (cif FF) where
+instance : Iris.OFE (Fml FF) where
   Equiv := equiv
   Dist := dist
   dist_eqv := ⟨ fun x => @dist.refl _ _ x, dist.symm, dist.trans ⟩
@@ -215,4 +215,4 @@ instance : Iris.OFE (cif FF) where
     | own heq =>
       apply dist.own; exact heq
 
-end cif
+end Fml

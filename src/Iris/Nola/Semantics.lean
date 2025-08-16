@@ -16,16 +16,16 @@ variable (FF : Iris.GFunctors)
 
 open Iris.BI
 
-def cif.sem {FF} (s : cif FF) : Iris.IProp FF :=
+def Fml.sem {FF} (s : Fml FF) : Iris.IProp FF :=
   match s with
-  | @cif.all _ A Φ => iprop(∀ (a : A), cif.sem (Φ a))
-  | @cif.ex _ A Φ => iprop(∃ (a : A), cif.sem (Φ a))
-  | .bin s P Q => let (P, Q) := (cif.sem P, cif.sem Q);
+  | @Fml.all _ A Φ => iprop(∀ (a : A), Fml.sem (Φ a))
+  | @Fml.ex _ A Φ => iprop(∃ (a : A), Fml.sem (Φ a))
+  | .bin s P Q => let (P, Q) := (Fml.sem P, Fml.sem Q);
     (match s with
     | .and => iprop(P ∧ Q) | .or => iprop(P ∨ Q)
     | .imp => iprop(P -> Q) | .wand => iprop(P -∗ Q)
     | .sep => iprop(P ∗ Q))
-  | .un s P => let P := cif.sem P;
+  | .un s P => let P := Fml.sem P;
     (match s with
     | .plain => iprop(■ P) | .pers => iprop(<pers> P)
     | .bupd => iprop(|==> P)
@@ -33,44 +33,44 @@ def cif.sem {FF} (s : cif FF) : Iris.IProp FF :=
   | .pure φ => iprop(⌜φ⌝)
   | .later Φ => iprop(▷ Φ)
   | .inv N F => inv_tok N F
-  | cif.own a => Iris.own a
+  | Fml.own a => Iris.own a
 
 
-instance cif.inhabited : Inhabited (cif FF) where
-  default := cif.pure True
+instance Fml.inhabited : Inhabited (Fml FF) where
+  default := Fml.pure True
 
 syntax (name := sem) "⟦" (term:arg) "⟧" : term
 
 macro_rules
-  | `(⟦$f⟧)      => ``(cif.sem $f)
+  | `(⟦$f⟧)      => ``(Fml.sem $f)
 
-delab_rule cif.sem
+delab_rule Fml.sem
   | `($_ $f) => ``(⟦$f⟧)
 
 @[simp]
-theorem cif.wandiff_sem (P Q : @cif.{u1} FF) :
-  ⟦ cif(P ∗-∗ Q) ⟧ = iprop(⟦ P ⟧ ∗-∗ ⟦ Q ⟧) := by
-  simp [cif.wandIff, cif.sem]
+theorem Fml.wandiff_sem (P Q : @Fml.{u1} FF) :
+  ⟦ fml(P ∗-∗ Q) ⟧ = iprop(⟦ P ⟧ ∗-∗ ⟦ Q ⟧) := by
+  simp [Fml.wandIff, Fml.sem]
 
 @[simp]
-theorem sem_and (P Q : cif FF) : ⟦cif(P ∧ Q)⟧ = iprop(⟦P⟧ ∧ ⟦Q⟧) := rfl
+theorem sem_and (P Q : Fml FF) : ⟦fml(P ∧ Q)⟧ = iprop(⟦P⟧ ∧ ⟦Q⟧) := rfl
 @[simp]
-theorem sem_or (P Q : cif FF) : ⟦cif(P ∨ Q)⟧ = iprop(⟦P⟧ ∨ ⟦Q⟧) := rfl
+theorem sem_or (P Q : Fml FF) : ⟦fml(P ∨ Q)⟧ = iprop(⟦P⟧ ∨ ⟦Q⟧) := rfl
 @[simp]
-theorem sem_imp (P Q : cif FF) : ⟦cif(P → Q)⟧ = iprop(⟦P⟧ → ⟦Q⟧) := rfl
+theorem sem_imp (P Q : Fml FF) : ⟦fml(P → Q)⟧ = iprop(⟦P⟧ → ⟦Q⟧) := rfl
 @[simp]
-theorem sem_sep (P Q : cif FF) : ⟦cif(P ∗ Q)⟧ = iprop(⟦P⟧ ∗ ⟦Q⟧) := rfl
+theorem sem_sep (P Q : Fml FF) : ⟦fml(P ∗ Q)⟧ = iprop(⟦P⟧ ∗ ⟦Q⟧) := rfl
 @[simp]
-theorem sep_wand (P Q : cif FF) : ⟦cif(P -∗ Q)⟧ = iprop(⟦P⟧ -∗ ⟦Q⟧) := rfl
+theorem sep_wand (P Q : Fml FF) : ⟦fml(P -∗ Q)⟧ = iprop(⟦P⟧ -∗ ⟦Q⟧) := rfl
 @[simp]
-theorem sep_persistently (P : cif FF) : ⟦cif(<pers> P)⟧ = iprop(<pers> ⟦P⟧) := rfl
+theorem sep_persistently (P : Fml FF) : ⟦fml(<pers> P)⟧ = iprop(<pers> ⟦P⟧) := rfl
 
 @[simp]
-theorem cif.sem_lift (fP : cif FF) :
-  ⟦(liftCif fP)⟧ ⊣⊢ ⟦ fP ⟧ := by
+theorem Fml.sem_lift (fP : Fml FF) :
+  ⟦(liftFml fP)⟧ ⊣⊢ ⟦ fP ⟧ := by
   induction fP with
   | all Φ ih =>
-    simp_all [cif.sem, liftCif]
+    simp_all [Fml.sem, liftFml]
     constructor
     · iintro Hlift a; ispecialize Hlift (ULift.up a)
       istop; apply Iris.BI.entails_trans.trans Iris.BI.emp_sep.1
@@ -79,7 +79,7 @@ theorem cif.sem_lift (fP : cif FF) :
       istop; apply Iris.BI.entails_trans.trans Iris.BI.emp_sep.1
       apply (ih a.down).2
   | ex Φ ih =>
-    simp_all [cif.sem, liftCif]
+    simp_all [Fml.sem, liftFml]
     constructor
     · iintro ⟨a, Hlift⟩; iexists (a.down)
       istop
@@ -87,7 +87,7 @@ theorem cif.sem_lift (fP : cif FF) :
     · iintro ⟨a, HΦ⟩; iexists (ULift.up a); istop
       apply (ih a).2
   | bin s P Q ihP ihQ =>
-    simp_all [cif.sem, liftCif]
+    simp_all [Fml.sem, liftFml]
     cases s <;> simp []
     · apply Iris.BI.and_congr ihP ihQ
     · apply Iris.BI.or_congr ihP ihQ
@@ -95,7 +95,7 @@ theorem cif.sem_lift (fP : cif FF) :
     · apply Iris.BI.sep_congr ihP ihQ
     · apply Iris.BI.wand_congr ihP ihQ
   | un s P ih =>
-    simp_all [cif.sem, liftCif]
+    simp_all [Fml.sem, liftFml]
     cases s <;> simp []
     · constructor <;> apply Iris.BIPlainly.mono
       apply ih.1; apply ih.2
@@ -104,18 +104,18 @@ theorem cif.sem_lift (fP : cif FF) :
       apply ih.1; apply ih.2
     · unfold BIBase.except0; apply Iris.BI.or_congr_r ih
   | pure φ =>
-    simp_all [cif.sem, liftCif]
+    simp_all [Fml.sem, liftFml]
   | later P =>
-    simp_all [cif.sem, liftCif]
+    simp_all [Fml.sem, liftFml]
   | inv N F =>
-    simp_all [cif.sem, liftCif]
+    simp_all [Fml.sem, liftFml]
     unfold inv_tok
     apply Iris.BI.exists_congr; intro i
     apply Iris.BI.sep_congr_r
     apply sinv_tok_lift
   | own a =>
-    simp_all [cif.sem, liftCif]
+    simp_all [Fml.sem, liftFml]
 
--- noncomputable def sForall.{u} (Φ : cif.{u} FF → Prop) : cif.{u} FF :=
+-- noncomputable def sForall.{u} (Φ : Fml.{u} FF → Prop) : Fml.{u} FF :=
 --   Classical.epsilon (fun p =>
---     ∃ (A : Type) (a : A) (P : A -> cif.{u} FF), Φ p = (⊢ ⟦ (P a) ⟧))
+--     ∃ (A : Type) (a : A) (P : A -> Fml.{u} FF), Φ p = (⊢ ⟦ (P a) ⟧))
