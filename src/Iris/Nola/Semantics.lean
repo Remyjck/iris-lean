@@ -47,6 +47,32 @@ macro_rules
 delab_rule Fml.sem
   | `($_ $f) => ``(⟦$f⟧)
 
+noncomputable def Fml.sForall.{u} {FF} (Φ : Fml.{u} FF → Prop) : Fml.{u} FF :=
+  fml(∀ (p : ULift (Iris.IProp FF)),
+      let fp : Fml.{u} FF := Classical.epsilon (fun fp => (⊢ iprop(⟦ (fp) ⟧ ∗-∗ p.down)) ∧ Φ fp)
+      fml(⌜(⊢ ⟦ fp ⟧ ∗-∗ p.down) ∧ Φ fp⌝ -> fp))
+
+noncomputable def Fml.sExists.{u} {FF} (Φ : Fml.{u} FF → Prop) : Fml.{u} FF :=
+  fml(∃ (p : ULift (Iris.IProp FF)),
+      let fp : Fml.{u} FF := Classical.epsilon (fun fp => (⊢ iprop(⟦ (fp) ⟧ ∗-∗ p.down)) ∧ Φ fp)
+      fml(⌜(⊢ ⟦ fp ⟧ ∗-∗ p.down) ∧ Φ fp⌝ ∧ fp))
+
+@[simp]
+theorem sem_sForall (Φ : Fml FF -> Prop) :
+  ⟦ (Fml.sForall.{u} Φ) ⟧ =
+  iprop(∀ (p : ULift.{u, 0} (Iris.IProp FF)),
+      let formula := Classical.epsilon fun fp => (⊢ ⟦fp⟧ ∗-∗ p.down) ∧ Φ fp
+      iprop(⌜(⊢ ⟦formula⟧ ∗-∗ p.down) ∧ Φ formula⌝ → ⟦formula⟧)) := by
+ simp [Fml.sForall, Fml.sem, Fml.imp]
+
+@[simp]
+theorem sem_sExists (Φ : Fml FF -> Prop) :
+ ⟦ (Fml.sExists.{u} Φ) ⟧ =
+ iprop(∃ (p : ULift.{u, 0} (Iris.IProp FF)),
+      let formula := Classical.epsilon fun fp => (⊢ ⟦fp⟧ ∗-∗ p.down) ∧ Φ fp
+      iprop(⌜(⊢ ⟦formula⟧ ∗-∗ p.down) ∧ Φ formula⌝ ∧ ⟦formula⟧)) := by
+ simp [Fml.sExists, Fml.sem, Fml.and]
+
 @[simp]
 theorem Fml.wandiff_sem (P Q : @Fml.{u1} FF) :
   ⟦ fml(P ∗-∗ Q) ⟧ = iprop(⟦ P ⟧ ∗-∗ ⟦ Q ⟧) := by

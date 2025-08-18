@@ -52,7 +52,7 @@ protected noncomputable def sForall.{u} (Ψ : aProp.{u + 1} FF -> Prop) : aProp.
 
 noncomputable def all {α : Sort _} (P : α → aProp FF) : aProp FF := aProp.sForall (fun p => ∃ a, P a = p)
 
-protected def sExists (Ψ : aProp FF -> Prop) : aProp FF :=
+protected noncomputable def sExists (Ψ : aProp FF -> Prop) : aProp FF :=
   AProp.sExists Ψ
 
 protected def sep (P Q : aProp FF) : aProp FF :=  AProp.sep P Q
@@ -131,7 +131,7 @@ theorem sForall_ne {n : Nat} {Ψ₁ Ψ₂ : aProp FF → Prop} :
   intros Hliftrel
   simp [BI.sForall, aProp.sForall]
   apply (Dist_UPredDist _ _).1
-  simp [AProp.sForall, AProp.to_IProp, AProp.Fml.sForall, Fml.sem]
+  simp [AProp.sForall, AProp.to_IProp, Fml.sForall, Fml.sem]
   apply UPred.instBIUPred.sForall_ne
   simp_all [liftRel, AProp.of_Formula]
   rcases Hliftrel with ⟨HΨ1, HΨ2⟩
@@ -142,7 +142,10 @@ theorem sForall_ne {n : Nat} {Ψ₁ Ψ₂ : aProp FF → Prop} :
             ⟦(Classical.epsilon fun fp => (⊢ ⟦fp⟧ ∗-∗ P.down) ∧ Ψ₂ (AProp.of_Formula fp))⟧)
     constructor
     · exists P
-    · sorry
+    · simp [OFE.Dist]; intros n' x Hle Hvalid
+      constructor <;> intros HΨ
+      · specialize HΨ1 (AProp.FProp (Classical.epsilon fun fp => (⊢ ⟦fp⟧ ∗-∗ P.down) ∧ Ψ₁ (AProp.FProp fp)))
+
   · sorry
 
 theorem sExists_ne {n : Nat} {Ψ₁ Ψ₂ : aProp FF → Prop} :
@@ -405,13 +408,13 @@ theorem sForall_intro {P : aProp FF} {Ψ : aProp FF → Prop} :
   apply Entail_UPredEntail.1
   simp_all [sForall, aProp.sForall, AProp.sForall', Fml.sForall, AProp.to_IProp]
   cases P with | FProp fP
-  simp [AProp.sForall, AProp.Fml.sForall, Fml.sem, Fml.imp]
+  simp [AProp.sForall, Fml.sForall, Fml.sem, Fml.imp]
   iintro iP P ⟨%HΨ1, %HΨ2⟩
   specialize H
-    (AProp.of_Formula (Classical.epsilon fun fp => (⊢ ⟦fp⟧ ∗-∗ P.down) ∧ Ψ (AProp.of_Formula fp)))
+    (AProp.FProp (Classical.epsilon fun fp => (⊢ ⟦fp⟧ ∗-∗ P.down) ∧ Ψ (AProp.FProp fp)))
     HΨ2
   replace H := Entail_UPredEntail.2 H
-  simp [AProp.to_IProp, AProp.of_Formula] at H
+  simp [AProp.to_IProp] at H
   apply H
 
 example (P : Fml FF → Prop) :
@@ -428,7 +431,7 @@ theorem sForall_elim {p : aProp.{u + 1} FF} {Ψ : aProp.{u+1} FF → Prop} :
   apply Entail_UPredEntail.1
   simp_all [sForall, aProp.sForall, AProp.sForall, Fml.sForall, AProp.to_IProp]
   cases p with | FProp fP
-  simp [AProp.sForall, AProp.Fml.sForall, Fml.sem, Fml.imp]
+  simp [AProp.sForall, Fml.sForall, Fml.sem, Fml.imp]
   iintro H; ispecialize H (ULift.up ⟦fP⟧); simp []
   istop
   apply Iris.BI.entails_trans.trans Iris.BI.emp_sep.1
@@ -437,12 +440,54 @@ theorem sForall_elim {p : aProp.{u + 1} FF} {Ψ : aProp.{u+1} FF → Prop} :
     ipure_intro; intro _
     have he := @Classical.epsilon_spec _ fun fp => (⊢ ⟦fp⟧ ∗-∗ ⟦fP⟧) ∧ Ψ (AProp.FProp fp)
     specialize he ⟨fP, ⟨ Iris.BI.wandIff_refl, HΨ⟩⟩
-    constructor <;> simp [AProp.of_Formula, he]
+    constructor <;> simp [he]
   iintro H
   apply Iris.BI.entails_trans.trans Iris.BI.true_imp.1
-  have he := @Classical.epsilon_spec _ fun fp => (⊢ ⟦fp⟧ ∗-∗ ⟦fP⟧) ∧ Ψ (AProp.of_Formula fp)
+  have he := @Classical.epsilon_spec _ fun fp => (⊢ ⟦fp⟧ ∗-∗ ⟦fP⟧) ∧ Ψ (AProp.FProp fp)
   specialize he ⟨fP, ⟨ Iris.BI.wandIff_refl, HΨ⟩⟩
   exact (Iris.BI.wandIff_equiv he.1).1
+
+theorem sExists_intro {Ψ : aProp FF → Prop} {p : aProp FF} :
+  Ψ p → p ⊢ sExists Ψ := by
+  intro HΨ
+  apply Entail_UPredEntail.1
+  simp_all [sExists, aProp.sExists, AProp.sExists, Fml.sExists, AProp.to_IProp]
+  cases p with | FProp fP
+  simp [Fml.sem]
+  iintro HP
+  iexists (ULift.up ⟦fP⟧); simp []
+  have he := @Classical.epsilon_spec _ fun fp => (⊢ ⟦fp⟧ ∗-∗ ⟦fP⟧) ∧ Ψ (AProp.FProp fp)
+  obtain ⟨H1, H2⟩ := he ⟨fP, ⟨ Iris.BI.wandIff_refl, HΨ⟩⟩
+  iintro HP
+  isplit r [HP]
+  · ipure_intro
+    simp [*]
+  · istop; exact (Iris.BI.wandIff_equiv H1).2
+
+theorem sExists_elim {Φ : aProp FF → Prop} {Q : aProp FF} :
+  (∀ (p : aProp FF), Φ p → p ⊢ Q) → sExists Φ ⊢ Q := by
+  intro H
+  apply Entail_UPredEntail.1
+  simp_all [sExists, aProp.sExists, AProp.sExists, Fml.sExists, AProp.to_IProp]
+  cases Q with | FProp fP
+  simp [Fml.sem]
+  iintro ⟨P, ⟨⟨%_, %Hclassic⟩, H⟩⟩
+  specialize H (AProp.FProp (Classical.epsilon fun fp => (⊢ ⟦fp⟧ ∗-∗ P.down) ∧ Φ (AProp.FProp fp))) Hclassic
+  apply H
+
+theorem later_sForall_2 {Φ : aProp FF → Prop} :
+  (∀ p, ⌜Φ p⌝ → later p) ⊢ later (sForall Φ) := by
+  apply Entail_UPredEntail.1
+  simp [AProp.to_IProp, sForall, aProp.sForall, AProp.sForall, Fml.sForall]
+  conv => rhs; simp [later, aProp.later, AProp.later, Fml.sem]
+  apply Iris.BI.entails_trans.trans _ Iris.BI.later_forall.2
+  iintro H P
+  simp [«forall»]
+  simp [AProp.to_IProp, sForall, aProp.sForall, AProp.sForall, Fml.sForall, Fml.sem]
+  ispecialize H P; istop; apply Iris.BI.entails_trans.trans Iris.BI.emp_sep.1
+  generalize h1 : (Classical.epsilon fun fp => (⊢ ⟦fp⟧ ∗-∗ P.down) ∧ ∃ a, iprop(⌜Φ a⌝ → later a) = AProp.FProp fp) = formula1
+  generalize h2 : (Classical.epsilon fun fp => (⊢ ⟦fp⟧ ∗-∗ P.down) ∧ Φ (AProp.FProp fp)) = formula2
+  sorry
 
 noncomputable instance : BI.{u+2} (aProp.{u+1} FF) where
   entails_preorder := entails_preorder
@@ -469,8 +514,8 @@ noncomputable instance : BI.{u+2} (aProp.{u+1} FF) where
   imp_elim := aProp.imp_elim
   sForall_intro := sForall_intro
   sForall_elim := sForall_elim
-  sExists_intro := sorry
-  sExists_elim := sorry
+  sExists_intro := sExists_intro
+  sExists_elim := sExists_elim
   sep_mono := aProp.sep_mono
   emp_sep := aProp.emp_sep
   sep_symm := aProp.sep_symm
@@ -486,7 +531,7 @@ noncomputable instance : BI.{u+2} (aProp.{u+1} FF) where
   persistently_and_l := aProp.persistently_and_l
   later_mono := aProp.later_mono
   later_intro := aProp.later_intro
-  later_sForall_2 := sorry
+  later_sForall_2 := later_sForall_2
   later_sExists_false := sorry
   later_sep := aProp.later_sep
   later_persistently := aProp.later_persistently
@@ -517,6 +562,20 @@ instance : OFE.NonExpansive (plainly : aProp FF -> aProp FF) where
     simp [aProp.plainly, OFE.Dist] <;>
     apply UPred.instNonExpansiveUPredPlainly.ne (n := n) H
 
+theorem plainly_sForall_2 {Φ : aProp FF → Prop} :
+  (∀ p, ⌜Φ p⌝ → ■ p) ⊢ ■ sForall Φ := by
+  apply Entail_UPredEntail.1
+  simp [AProp.to_IProp, sForall, aProp.sForall, AProp.sForall, Fml.sForall]
+  conv => rhs; simp [later, aProp.later, AProp.later, Fml.sem]
+  apply Iris.BI.entails_trans.trans _ Iris.BI.plainly_forall.2
+  iintro H P
+  simp [«forall»]
+  simp [AProp.to_IProp, sForall, aProp.sForall, AProp.sForall, Fml.sForall, Fml.sem]
+  ispecialize H P; istop; apply Iris.BI.entails_trans.trans Iris.BI.emp_sep.1
+  generalize h1 : (Classical.epsilon fun fp => (⊢ ⟦fp⟧ ∗-∗ P.down) ∧ ∃ a, iprop(⌜Φ a⌝ → later a) = AProp.FProp fp) = formula1
+  generalize h2 : (Classical.epsilon fun fp => (⊢ ⟦fp⟧ ∗-∗ P.down) ∧ Φ (AProp.FProp fp)) = formula2
+  sorry
+
 noncomputable instance : BIPlainly (aProp FF) where
   mono := by
     intros P Q H
@@ -528,7 +587,7 @@ noncomputable instance : BIPlainly (aProp FF) where
   idem {P} := by
     rcases P with ⟨b, ⟨_,_⟩⟩ <;>
     apply UPred.instBIPlainlyUPred.idem
-  plainly_sForall_2 := sorry
+  plainly_sForall_2 := plainly_sForall_2
   plainly_impl_plainly := by
     intros P Q H
     rcases P with ⟨b₁, ⟨_,_⟩⟩ <;> rcases Q with ⟨b₂,  ⟨_,_⟩⟩ <;>

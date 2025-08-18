@@ -25,9 +25,6 @@ def to_Formula : AProp FF b -> Fml FF := fun P =>
 match P.guard with
 | FProp fP => fP
 
-def of_Formula (F : Fml.{u} FF) : AProp.{u} FF false :=
-  FProp F
-
 /- Binary connectives -/
 
 def and {b₁ b₂} (P : AProp FF b₁) (Q : AProp FF b₂) : AProp FF (b₁ || b₂) :=
@@ -122,13 +119,8 @@ def impred_all.{u, v} {A : Type u} (Φ : A -> AProp.{u} FF b) : AProp.{v} FF tru
 def all_pred {A : Type} (Φ : A -> (∀ b, AProp FF b)) : AProp FF true :=
   IProp iprop(∀ a, (Φ a true).to_IProp)
 
-noncomputable def Fml.sForall.{u} (Φ : Fml.{u} FF → Prop) : Fml.{u} FF :=
-  fml(∀ (p : ULift (Iris.IProp FF)),
-      let fp : Fml.{u} FF := Classical.epsilon (fun fp => (⊢ iprop(⟦ (fp) ⟧ ∗-∗ p.down)) ∧ Φ fp)
-      fml(⌜(⊢ ⟦ fp ⟧ ∗-∗ p.down) ∧ Φ fp⌝ -> fp))
-
 noncomputable def sForall (Ψ : AProp FF false -> Prop) : AProp FF false :=
-  FProp (AProp.Fml.sForall (fun (p : Fml FF) => Ψ (AProp.of_Formula p)))
+  FProp (Fml.sForall (fun (p : Fml FF) => Ψ (FProp p)))
 
 def sForall' {FF} (Ψ : AProp.{u+1} FF true -> Prop) : AProp.{u+1} FF true :=
   IProp (UPred.sForall (fun P => Ψ (IProp P)))
@@ -136,9 +128,8 @@ def sForall' {FF} (Ψ : AProp.{u+1} FF true -> Prop) : AProp.{u+1} FF true :=
 def sForall'' {FF} (Ψ : ∀ b, AProp FF b -> Prop) : AProp FF true :=
   IProp (UPred.sForall (fun P => Ψ true (IProp P)))
 
-def sExists (Ψ : AProp.{u+1} FF false -> Prop) : AProp.{u+1} FF false :=
-  FProp
-    (Fml.sExists.{u} (fun (p : Fml.{u} FF) => Ψ (AProp.of_Formula (liftFml.{u,u+1} p))))
+noncomputable def sExists (Ψ : AProp FF false -> Prop) : AProp FF false :=
+  FProp (Fml.sExists (fun (p : Fml FF) => Ψ (FProp p)))
 
 def ex {A : Type} {b} (Φ : A -> AProp FF b) : AProp FF b :=
 match b with

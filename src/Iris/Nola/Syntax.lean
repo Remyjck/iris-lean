@@ -72,24 +72,6 @@ def imp_lift.{u, v} (P : Fml.{u} FF) (Q : Fml.{v} FF) : Fml.{max u v} FF :=
 def sep (P Q : Fml FF) : Fml FF := Fml.bin binsel.sep P Q
 def wand (P Q : Fml FF) : Fml FF := Fml.bin binsel.wand P Q
 
-
-/- [∀ p, ⌜Φ p⌝ -> p] -/
-def sForall.{u} (Φ : Fml.{u} FF → Prop) : Fml.{u + 1} FF :=
-  all (fun (p : Fml.{u} FF) =>
-    imp
-      (pure (Φ p))
-      (liftFml.{u,u+1} p))
-
-/- [∃ p, ⌜Φ p⌝ ∧ p] -/
-def sExists (Φ : Fml.{u} FF → Prop) : Fml.{u + 1} FF :=
-  ex (fun p =>
-    and
-      (pure (Φ p))
-      (liftFml.{u,u+1} p))
-
-def all' {α} (P : α → Fml FF) : Fml FF := sForall (fun p => ∃ a, P a = p)
-def ex' {α} (P : α → Fml FF) : Fml FF := sExists (fun p => ∃ a, P a = p)
-
 inductive dist {FF} : Nat -> Fml FF -> Fml FF -> Prop
 | bin : ∀ {n} {s s' : binsel} {P Q P' Q' : Fml FF},
     s = s' ->
