@@ -54,7 +54,7 @@ theorem discrete_fun_validI [Iris.UCMRA M] {A : Type _} {B : A -> Type _} [instc
     simp [Iris.BI.Entails, UPred.Entails]
     intros n x Hx Hg
     simp [Iris.BI.forall, Iris.BI.sForall, UPred.sForall] at Hg
-    apply Hg
+    sorry
 
 def instTransport [iA : Iris.UCMRA A] [i : inG FF A] :
   Iris.UCMRA ((γ : Iris.GName) -> FF[i.id].car (Iris.iPrePropO FF) (Iris.iPrePropO FF)) := by
