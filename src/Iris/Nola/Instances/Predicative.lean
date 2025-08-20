@@ -403,7 +403,7 @@ theorem equiv_iff {P Q : aProp FF} :
     apply (Entails_UPredEntails _ _).2 Hentails
 
 theorem sForall_intro {P : aProp FF} {Ψ : aProp FF → Prop} :
-  (∀ (p : aProp FF), Ψ p → P ⊢ p) → P ⊢ sForall.{u + 2} Ψ := by
+  (∀ (p : aProp FF), Ψ p → P ⊢ p) → P ⊢ sForall Ψ := by
   intro H
   apply Entail_UPredEntail.1
   simp_all [sForall, aProp.sForall, AProp.sForall', Fml.sForall, AProp.to_IProp]
@@ -426,7 +426,7 @@ example (P : Fml FF → Prop) :
     apply (h (Iris.BI.wandIff_refl))
 
 theorem sForall_elim {p : aProp.{u + 1} FF} {Ψ : aProp.{u+1} FF → Prop} :
-  Ψ p → sForall.{u + 2} Ψ ⊢ p := by
+  Ψ p → sForall Ψ ⊢ p := by
   intro HΨ
   apply Entail_UPredEntail.1
   simp_all [sForall, aProp.sForall, AProp.sForall, Fml.sForall, AProp.to_IProp]
@@ -475,18 +475,72 @@ theorem sExists_elim {Φ : aProp FF → Prop} {Q : aProp FF} :
   specialize H (AProp.FProp (Classical.epsilon fun fp => (⊢ ⟦fp⟧ ∗-∗ P.down) ∧ Φ (AProp.FProp fp))) Hclassic
   apply H
 
+noncomputable def sForall_pred (P : ULift (Iris.IProp FF)) (Ψ : aProp FF -> Prop) :=
+  (fun fp => (⊢ ⟦fp⟧ ∗-∗ P.down) ∧ Ψ (AProp.FProp fp))
+
+theorem sForall_fold (Ψ : aProp FF -> Prop) :
+  aProp.sForall Ψ
+  =
+  AProp.FProp
+    (Fml.all fun p =>
+      let p' := (Classical.epsilon (sForall_pred p Ψ))
+      fml(⌜sForall_pred p Ψ p'⌝ -> p')) := by
+  unfold aProp.sForall AProp.sForall Fml.sForall
+  unfold sForall_pred
+  simp []
+
+axiom pure_imp [BI PROP] {Q P : PROP} {φ : Prop} (_ : φ) (h : Q ⊢ P) : (⌜φ⌝ -> Q) ⊢ P
+
+theorem sForall_adequate {Φ : aProp FF → Prop} :
+  (∀ p, ⌜Φ p⌝ → p) ⊢ (sForall Φ) := by
+  simp [«forall»]
+  apply sForall_intro
+  intros P HΦ; cases P with | FProp fP
+  simp [AProp.to_IProp, sForall]
+  simp [sForall_fold]
+  apply Entail_UPredEntail.1
+  simp [AProp.to_IProp, Fml.sem]
+  iintro H; ispecialize H (ULift.up ⟦fP⟧); istop
+  apply Iris.BI.emp_sep.1.trans
+  have he := @Classical.epsilon_spec _ (sForall_pred { down := ⟦fP⟧ } fun p => ∃ a, (⌜Φ a⌝ → a) ⊣⊢ p)
+  specialize he (by exists fP; simp [sForall_pred, Iris.BI.wandIff_refl]; exists (AProp.FProp fP); sorry)
+  apply pure_imp he
+  simp [sForall_pred] at he; replace he := he.1
+  apply (Iris.BI.wandIff_equiv he).1
+
+theorem sForall_adequate_2 {Φ : aProp FF → Prop} :
+  (∀ p, ⌜Φ p⌝ → p) ⊣⊢ (sForall Φ) := by
+  simp [«forall»]
+  refine ⟨ sForall_adequate, ?_⟩
+  apply sForall_intro
+  rintro P ⟨Q, HΦ⟩; cases P with | FProp fP; cases Q with | FProp fQ
+  apply entails_preorder.trans _ HΦ.1
+  simp [AProp.to_IProp, sForall]
+  simp [sForall_fold]
+  apply Entail_UPredEntail.1
+  conv => simp [AProp.to_IProp]; rhs; simp [imp, aProp.imp, BI.pure, aProp.pure, AProp.pure]; unfold AProp.imp
+  simp [Fml.sem]
+  iintro H %HΦ; ispecialize H (ULift.up ⟦fP⟧); istop
+  apply Iris.BI.emp_sep.1.trans
+  sorry
+
 theorem later_sForall_2 {Φ : aProp FF → Prop} :
   (∀ p, ⌜Φ p⌝ → later p) ⊢ later (sForall Φ) := by
+  apply Iris.BI.entails_trans.trans
+  simp [«forall»]
   apply Entail_UPredEntail.1
   simp [AProp.to_IProp, sForall, aProp.sForall, AProp.sForall, Fml.sForall]
   conv => rhs; simp [later, aProp.later, AProp.later, Fml.sem]
   apply Iris.BI.entails_trans.trans _ Iris.BI.later_forall.2
   iintro H P
-  simp [«forall»]
   simp [AProp.to_IProp, sForall, aProp.sForall, AProp.sForall, Fml.sForall, Fml.sem]
   ispecialize H P; istop; apply Iris.BI.entails_trans.trans Iris.BI.emp_sep.1
   generalize h1 : (Classical.epsilon fun fp => (⊢ ⟦fp⟧ ∗-∗ P.down) ∧ ∃ a, iprop(⌜Φ a⌝ → later a) = AProp.FProp fp) = formula1
   generalize h2 : (Classical.epsilon fun fp => (⊢ ⟦fp⟧ ∗-∗ P.down) ∧ Φ (AProp.FProp fp)) = formula2
+
+  apply Iris.BI.entails_trans.trans _ Iris.BI.later_intro
+  -- Here the top assumption should simplify to ⟦formula1⟧ and the bottom assumption to ⟦formula2⟧
+  -- There two are then equivalent by transitivity through [P.down]
   sorry
 
 noncomputable instance : BI.{u+2} (aProp.{u+1} FF) where
@@ -572,8 +626,9 @@ theorem plainly_sForall_2 {Φ : aProp FF → Prop} :
   simp [«forall»]
   simp [AProp.to_IProp, sForall, aProp.sForall, AProp.sForall, Fml.sForall, Fml.sem]
   ispecialize H P; istop; apply Iris.BI.entails_trans.trans Iris.BI.emp_sep.1
-  generalize h1 : (Classical.epsilon fun fp => (⊢ ⟦fp⟧ ∗-∗ P.down) ∧ ∃ a, iprop(⌜Φ a⌝ → later a) = AProp.FProp fp) = formula1
+  generalize h1 : (Classical.epsilon fun fp => (⊢ ⟦fp⟧ ∗-∗ P.down) ∧ ∃ a, iprop(⌜Φ a⌝ → ■ a) = AProp.FProp fp) = formula1
   generalize h2 : (Classical.epsilon fun fp => (⊢ ⟦fp⟧ ∗-∗ P.down) ∧ Φ (AProp.FProp fp)) = formula2
+
   sorry
 
 noncomputable instance : BIPlainly (aProp FF) where
