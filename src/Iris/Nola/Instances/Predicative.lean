@@ -517,6 +517,57 @@ theorem sForall_adequate {Φ : aProp FF → Prop} :
   simp [sForall_pred] at he; replace he := he.1
   apply (Iris.BI.wandIff_equiv he).1
 
+theorem forall_upred {α : Sort _} {Φ : α -> aProp FF} {P : aProp FF} :
+  (P ⊢ (∀ a, Φ a)) -> AProp.to_IProp P ⊢ (∀ (a : α), AProp.to_IProp (Φ a)) := by
+  intro H
+  cases P with | FProp P
+  replace H := Entail_UPredEntail.2 H
+  apply H.trans
+  iintro H a; istop
+  apply Entail_UPredEntail.2
+  simp [«forall»]
+  apply sForall_elim
+  refine ⟨a, ⟨entails_preorder.refl,entails_preorder.refl⟩⟩
+
+theorem upred_forall {α : Sort _} {Φ : α -> aProp FF} {P : aProp FF} :
+  (AProp.to_IProp P ⊢ (∀ (a : α), AProp.to_IProp (Φ a))) -> (P ⊢ (∀ a, Φ a)) := by
+  intro H
+  cases P with | FProp P
+  apply Entail_UPredEntail.1
+  apply H.trans
+  conv => rhs; simp [«forall», AProp.to_IProp]
+  simp [sForall, aProp.sForall, AProp.sForall]
+  iintro H iP ⟨%H1, ⟨a, %H2⟩⟩
+  ispecialize H a; istop; apply Iris.BI.emp_sep.1.trans
+  replace H2 := (Entails_UPredEntails _ _).2 H2
+  apply H2.1
+
+theorem to_iprop_all {α : Sort _} {Φ : α -> aProp FF} :
+  AProp.to_IProp (iprop(∀ (a : α), Φ a)) ⊢ ∀ (a : α), (Φ a).to_IProp := by
+  apply forall_upred
+  apply entails_preorder.refl
+
+theorem all_to_iprop {α : Sort _} {Φ : α -> aProp FF} :
+  (∀ (a : α), (Φ a).to_IProp) ⊢ AProp.to_IProp (iprop(∀ (a : α), Φ a)) := by
+  conv => rhs; simp [«forall», sForall, aProp.sForall, AProp.sForall, AProp.to_IProp]
+  apply Iris.BI.sForall_intro
+  rintro P ⟨a, Ha⟩
+  apply Iris.BI.entails_preorder.trans _ Ha.1
+  iintro H ⟨%H1, ⟨a, %H2⟩⟩
+  ispecialize H a; istop; apply Iris.BI.emp_sep.1.trans
+  replace H2 := (Entails_UPredEntails _ _).2 H2
+  apply H2.1
+
+theorem later_upred (P Q : aProp FF ) :
+(P.to_IProp ⊢ later Q.to_IProp) -> P ⊢ later Q := by
+  cases Q with | FProp Q
+  simp [Entails, aProp.Entails, later, aProp.later, AProp.later, AProp.to_IProp, Fml.sem]
+
+theorem upred_later (P Q : aProp FF ) :
+  (P ⊢ later Q) -> (P.to_IProp ⊢ later Q.to_IProp) := by
+  cases Q with | FProp Q
+  simp [Entails, aProp.Entails, later, aProp.later, AProp.later, AProp.to_IProp, Fml.sem]
+
 theorem sForall_adequate_2 {Φ : aProp FF → Prop} :
   (∀ p, ⌜Φ p⌝ → p) ⊣⊢ (sForall Φ) := by
   simp [«forall»]
@@ -536,6 +587,13 @@ theorem sForall_adequate_2 {Φ : aProp FF → Prop} :
 theorem later_sForall_2 {Φ : aProp FF → Prop} :
   (∀ p, ⌜Φ p⌝ → later p) ⊢ later (sForall Φ) := by
   apply entails_preorder.trans _ (later_mono sForall_adequate)
+  apply later_upred
+  apply Iris.BI.entails_trans.trans _ (Iris.BI.later_mono all_to_iprop)
+  apply Iris.BI.entails_trans.trans _ Iris.BI.later_forall_2
+  iintro H a; istop
+  apply upred_later
+  apply sForall_elim
+  exists a; simp []
   sorry
 
 noncomputable instance : BI.{u+2} (aProp.{u+1} FF) where
