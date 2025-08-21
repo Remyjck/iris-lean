@@ -87,9 +87,11 @@ theorem sem_imp (P Q : Fml FF) : ⟦fml(P → Q)⟧ = iprop(⟦P⟧ → ⟦Q⟧)
 @[simp]
 theorem sem_sep (P Q : Fml FF) : ⟦fml(P ∗ Q)⟧ = iprop(⟦P⟧ ∗ ⟦Q⟧) := rfl
 @[simp]
-theorem sep_wand (P Q : Fml FF) : ⟦fml(P -∗ Q)⟧ = iprop(⟦P⟧ -∗ ⟦Q⟧) := rfl
+theorem sem_wand (P Q : Fml FF) : ⟦fml(P -∗ Q)⟧ = iprop(⟦P⟧ -∗ ⟦Q⟧) := rfl
 @[simp]
-theorem sep_persistently (P : Fml FF) : ⟦fml(<pers> P)⟧ = iprop(<pers> ⟦P⟧) := rfl
+theorem sem_persistently (P : Fml FF) : ⟦fml(<pers> P)⟧ = iprop(<pers> ⟦P⟧) := rfl
+@[simp]
+theorem sem_plainly (P : Fml FF) : ⟦fml(■ P)⟧ = iprop(■ ⟦P⟧) := rfl
 
 @[simp]
 theorem Fml.sem_lift (fP : Fml FF) :
