@@ -674,6 +674,9 @@ theorem sExists_adequate' {Φ : aProp FF → Prop} :
   apply and_elim_r
   apply and_intro; apply pure_intro HΦ; apply entails_preorder.refl
 
+theorem persistently_and {P Q : aProp FF} : <pers> (P ∧ Q) ⊣⊢ <pers> P ∧ <pers> Q :=
+  ⟨and_intro (persistently_mono and_elim_l) (persistently_mono and_elim_r), persistently_and_2⟩
+
 theorem persistently_sExists_1 {Ψ : aProp FF → Prop} :
   <pers> sExists Ψ ⊢ ∃ p, ⌜Ψ p⌝ ∧ <pers> p := by
   apply entails_preorder.trans (persistently_mono sExists_adequate')
@@ -684,7 +687,11 @@ theorem persistently_sExists_1 {Ψ : aProp FF → Prop} :
   apply persistently_upred.2
   apply sExists_intro
   exists a; simp []
-  sorry
+  constructor
+  · apply entails_preorder.trans _ persistently_and_2
+    apply and_intro; apply and_elim_l; apply and_elim_r
+  · apply entails_preorder.trans persistently_and.1
+    apply and_intro; apply and_elim_l; apply and_elim_r
 
 theorem false_conv : (iprop(False) : Iris.IProp FF) = AProp.to_IProp (AProp.pure (False)) := rfl
 
