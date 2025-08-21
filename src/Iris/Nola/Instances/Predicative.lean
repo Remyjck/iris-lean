@@ -489,7 +489,9 @@ theorem sForall_fold (Ψ : aProp FF -> Prop) :
   unfold sForall_pred
   simp []
 
-axiom pure_imp [BI PROP] {Q P : PROP} {φ : Prop} (_ : φ) (h : Q ⊢ P) : (⌜φ⌝ -> Q) ⊢ P
+theorem pure_imp [BI PROP] {Q P : PROP} {φ : Prop} (hφ : φ) (h : Q ⊢ P) : (⌜φ⌝ -> Q) ⊢ P :=
+  let and_intro := Iris.BI.and_intro (Iris.BI.entails_preorder.refl) (Iris.BI.pure_intro hφ)
+  and_intro.trans (Iris.BI.imp_elim_l.trans h)
 
 theorem sForall_adequate {Φ : aProp FF → Prop} :
   (∀ p, ⌜Φ p⌝ → p) ⊢ (sForall Φ) := by
@@ -597,21 +599,31 @@ theorem upred_later {P Q : aProp FF} :
   cases P with | FProp P
   simp [Entails, aProp.Entails, later, aProp.later, AProp.later, AProp.to_IProp, Fml.sem]
 
-theorem sForall_adequate_2 {Φ : aProp FF → Prop} :
-  (∀ p, ⌜Φ p⌝ → p) ⊣⊢ (sForall Φ) := by
-  simp [«forall»]
-  refine ⟨ sForall_adequate, ?_⟩
-  apply sForall_intro
-  rintro P ⟨Q, HQ⟩; cases P with | FProp fP; cases Q with | FProp fQ
-  apply entails_preorder.trans _ HQ.1
-  simp [AProp.to_IProp, sForall]
-  simp [sForall_fold]
-  apply Entail_UPredEntail.1
-  conv => simp [AProp.to_IProp]; rhs; simp [imp, aProp.imp, BI.pure, aProp.pure, AProp.pure]; unfold AProp.imp
-  simp [Fml.sem]
-  iintro H %HΦ; ispecialize H (ULift.up ⟦fP⟧); istop
-  apply Iris.BI.emp_sep.1.trans
-  sorry
+-- theorem sForall_adequate_2 {Φ : aProp FF → Prop} :
+--   (∀ p, ⌜Φ p⌝ → p) ⊣⊢ (sForall Φ) := by
+--   simp [«forall»]
+--   refine ⟨ sForall_adequate, ?_⟩
+--   apply sForall_intro
+--   rintro P ⟨Q, HQ⟩; cases P with | FProp fP; cases Q with | FProp fQ
+--   apply entails_preorder.trans _ HQ.1
+--   simp [AProp.to_IProp, sForall]
+--   simp [sForall_fold]
+--   apply Entail_UPredEntail.1
+--   conv => simp [AProp.to_IProp]; rhs; simp [imp, aProp.imp, BI.pure, aProp.pure, AProp.pure]; unfold AProp.imp
+--   simp [Fml.sem]
+--   iintro H %HΦ; ispecialize H (ULift.up ⟦fP⟧); istop
+--   apply Iris.BI.emp_sep.1.trans
+--   sorry
+
+theorem later_imp_true {φ : Prop} {a : Iris.IProp FF} : (⌜φ⌝ → later a) ⊢ later iprop(⌜φ⌝ → a) :=
+  fun
+  | 0, _, _, _ => trivial
+  | n+1, x, Hx, H =>
+    by
+      simp [BI.imp, UPred.imp, later, UPred.later, BI.pure, UPred.pure]
+      intros n' x' Hinc Hle Hvalid Hφ
+      specialize H (n + 1) x (CMRA.inc_refl _) (Nat.le_refl _) Hx Hφ; simp [later, UPred.later] at H
+      apply a.mono H (CMRA.incN_of_inc _ Hinc) Hle
 
 theorem later_sForall_2 {Φ : aProp FF → Prop} :
   (∀ p, ⌜Φ p⌝ → later p) ⊢ later (sForall Φ) := by
@@ -623,7 +635,14 @@ theorem later_sForall_2 {Φ : aProp FF → Prop} :
   apply later_upred.2
   apply sForall_elim
   exists a; simp []
-  sorry
+  apply (Entails_UPredEntails _ _).1
+  cases a with | FProp a
+  simp [BI.imp, aProp.imp, AProp.to_IProp, BI.pure, aProp.pure, AProp.pure, later, aProp.later, AProp.later]
+  unfold AProp.imp; simp [Fml.sem]
+  constructor
+  · apply later_imp_true
+  · iintro H %HΦ; istop; apply Iris.BI.later_mono
+    apply pure_imp HΦ Iris.BI.entails_preorder.refl
 
 theorem sExists_adequate {Φ : aProp FF → Prop} :
   (∃ p, ⌜Φ p⌝ ∧ p) ⊢ (sExists Φ) := by
@@ -783,7 +802,14 @@ theorem plainly_sForall_2 {Φ : aProp FF → Prop} :
   apply plainly_upred.2
   apply sForall_elim
   exists a; simp []
-  sorry
+  constructor
+  · sorry
+  · apply Entail_UPredEntail.1
+    cases a with | FProp a
+    simp [BI.imp, aProp.imp, AProp.to_IProp, BI.pure, aProp.pure, AProp.pure, plainly, aProp.plainly, AProp.plainly]
+    unfold AProp.imp; simp [Fml.sem]
+    iintro H %HΦ; istop; apply Iris.BIPlainly.mono
+    apply pure_imp HΦ Iris.BI.entails_preorder.refl
 
 noncomputable instance : BIPlainly (aProp FF) where
   mono := mono
