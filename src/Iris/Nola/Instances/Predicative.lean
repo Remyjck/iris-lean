@@ -556,6 +556,16 @@ theorem upred_forall {α : Sort _} {Φ : α -> aProp FF} {P : aProp FF} :
   replace H2 := (Entails_UPredEntails _ _).2 H2
   apply H2.1
 
+theorem upred_exists {α : Sort _} {Φ : α -> aProp FF} {P : aProp FF} :
+  (AProp.to_IProp P ⊢ (∃ (a : α), AProp.to_IProp (Φ a))) -> (P ⊢ (∃ a, Φ a)) := by
+  intro H
+  cases P with | FProp P
+  apply Entail_UPredEntail.1
+  apply H.trans
+  iintro ⟨a, Ha⟩; istop; apply Entail_UPredEntail.2
+  apply sExists_intro
+  exists a; refine ⟨entails_preorder.refl, entails_preorder.refl⟩
+
 theorem to_iprop_all {α : Sort _} {Φ : α -> aProp FF} :
   AProp.to_IProp (iprop(∀ (a : α), Φ a)) ⊢ ∀ (a : α), (Φ a).to_IProp := by
   apply forall_upred
@@ -580,6 +590,11 @@ theorem all_to_iprop {α : Sort _} {Φ : α -> aProp FF} :
 theorem later_upred {P Q : aProp FF} :
   (P.to_IProp ⊢ later Q.to_IProp) <-> (P ⊢ later Q) := by
   cases Q with | FProp Q
+  simp [Entails, aProp.Entails, later, aProp.later, AProp.later, AProp.to_IProp, Fml.sem]
+
+theorem upred_later {P Q : aProp FF} :
+  (later P.to_IProp ⊢ Q.to_IProp) <-> (later P ⊢ Q) := by
+  cases P with | FProp P
   simp [Entails, aProp.Entails, later, aProp.later, AProp.later, AProp.to_IProp, Fml.sem]
 
 theorem sForall_adequate_2 {Φ : aProp FF → Prop} :
@@ -652,21 +667,44 @@ theorem persistently_sExists_1 {Ψ : aProp FF → Prop} :
   exists a; simp []
   sorry
 
+theorem false_conv : (iprop(False) : Iris.IProp FF) = AProp.to_IProp (AProp.pure (False)) := rfl
+
+theorem later_conv (P : Iris.IProp FF) : later P = AProp.to_IProp (AProp.FProp fml(▷ P)) := rfl
+
+theorem later_sExists_false {Φ : aProp FF → Prop} :
+  later (sExists Φ) ⊢ later iprop(False) ∨ ∃ p, ⌜Φ p⌝ ∧ later p := by
+  apply entails_preorder.trans (later_mono sExists_adequate')
+  apply upred_later.1
+  apply Iris.BI.entails_trans.trans (Iris.BI.later_mono to_iprop_exists)
+  apply Iris.BI.entails_trans.trans Iris.BI.later_sExists_false
+  iintro ⟨Hf | Ha⟩ <;> istop
+  · rewrite [false_conv]; apply upred_later.2; apply or_intro_l
+  · iintro ⟨P, ⟨⟨a, %Ha⟩, H⟩⟩; istop; rewrite [later_conv]; apply Entail_UPredEntail.2; apply entails_preorder.trans _ or_intro_r
+    simp [] at Ha
+    cases a with | FProp a
+    simp [AProp.to_IProp, BI.and, aProp.and, BI.pure, aProp.pure, AProp.pure] at Ha
+    unfold AProp.and at Ha; simp [Fml.sem] at Ha
+    apply upred_exists
+    iintro H; iexists (AProp.FProp a); istop
+    simp [AProp.to_IProp, BI.and, aProp.and, later, aProp.later, AProp.later, BI.pure, aProp.pure, AProp.pure]
+    unfold AProp.and; simp [Fml.sem]
+    apply Iris.BI.entails_preorder.trans (Iris.BI.later_mono Ha.2)
+    sorry
+
 noncomputable instance : BI.{u+2} (aProp.{u+1} FF) where
   entails_preorder := entails_preorder
-  equiv_iff {P Q} := aProp.equiv_iff
-  and_ne.ne n P P' H Q Q' H' := aProp.and_ne H H'
-  or_ne.ne n P P' H Q Q' H' := aProp.or_ne H H'
-  imp_ne.ne n P P' H Q Q' H' := aProp.imp_ne H H'
-  sep_ne.ne n P P' H Q Q' H' := aProp.sep_ne H H'
-  wand_ne.ne n P P' H Q Q' H' := aProp.wand_ne H H'
-  persistently_ne.ne n P Q H := aProp.persistently_ne H
+  equiv_iff := aProp.equiv_iff
+  and_ne.ne _ _ _ H _ _ H' := aProp.and_ne H H'
+  or_ne.ne _ _ _ H _ _ H' := aProp.or_ne H H'
+  imp_ne.ne _ _ _ H _ _ H' := aProp.imp_ne H H'
+  sep_ne.ne _ _ _ H _ _ H' := aProp.sep_ne H H'
+  wand_ne.ne _ _ _ H _ _ H' := aProp.wand_ne H H'
+  persistently_ne.ne _ _ _ H := aProp.persistently_ne H
   later_ne := inferInstanceAs (OFE.NonExpansive (aProp.later))
-  sForall_ne {n Ψ₁ Ψ₂} := aProp.sForall_ne
-  sExists_ne {n Ψ₁ Ψ₂} := aProp.sExists_ne
+  sForall_ne := aProp.sForall_ne
+  sExists_ne := aProp.sExists_ne
   pure_intro := pure_intro
-  pure_elim' {ϕ P} I :=
-    UPred.instBIUPred.pure_elim' (fun HΦ => Entail_UPredEntail.2 (I HΦ))
+  pure_elim' I := UPred.instBIUPred.pure_elim' (fun HΦ => Entail_UPredEntail.2 (I HΦ))
   and_elim_l := aProp.and_elim_l
   and_elim_r := aProp.and_elim_r
   and_intro := aProp.and_intro
@@ -695,7 +733,7 @@ noncomputable instance : BI.{u+2} (aProp.{u+1} FF) where
   later_mono := aProp.later_mono
   later_intro := aProp.later_intro
   later_sForall_2 := later_sForall_2
-  later_sExists_false := sorry
+  later_sExists_false := later_sExists_false
   later_sep := aProp.later_sep
   later_persistently := aProp.later_persistently
   later_false_em := aProp.later_false_em
