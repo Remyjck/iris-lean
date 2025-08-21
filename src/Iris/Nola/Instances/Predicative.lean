@@ -615,7 +615,7 @@ theorem upred_later {P Q : aProp FF} :
 --   apply Iris.BI.emp_sep.1.trans
 --   sorry
 
-theorem later_imp_true {φ : Prop} {a : Iris.IProp FF} : (⌜φ⌝ → later a) ⊢ later iprop(⌜φ⌝ → a) :=
+theorem later_imp_pure {φ : Prop} {a : Iris.IProp FF} : (⌜φ⌝ → later a) ⊢ later iprop(⌜φ⌝ → a) :=
   fun
   | 0, _, _, _ => trivial
   | n+1, x, Hx, H =>
@@ -640,7 +640,7 @@ theorem later_sForall_2 {Φ : aProp FF → Prop} :
   simp [BI.imp, aProp.imp, AProp.to_IProp, BI.pure, aProp.pure, AProp.pure, later, aProp.later, AProp.later]
   unfold AProp.imp; simp [Fml.sem]
   constructor
-  · apply later_imp_true
+  · apply later_imp_pure
   · iintro H %HΦ; istop; apply Iris.BI.later_mono
     apply pure_imp HΦ Iris.BI.entails_preorder.refl
 
@@ -792,6 +792,14 @@ theorem plainly_upred {P Q : aProp FF} :
   cases Q with | FProp Q
   simp [Entails, aProp.Entails, plainly, aProp.plainly, AProp.plainly, AProp.to_IProp, Fml.sem]
 
+theorem plainly_imp_pure {φ : Prop} {a : Iris.IProp FF} : (⌜φ⌝ → ■ a) ⊢ ■ iprop(⌜φ⌝ → a) := by
+  simp [plainly, UPred.plainly, imp, UPred.imp, BI.pure, UPred.pure]
+  intros n x Hvalid H
+  simp [UPred.holds] at *
+  intros n' x' Hinc Hle Hvalid' Hφ
+  specialize H n x (.rfl) (Nat.le_refl _) Hvalid Hφ
+  apply a.mono H (CMRA.incN_of_inc _ Hinc) Hle
+
 theorem plainly_sForall_2 {Φ : aProp FF → Prop} :
   (∀ p, ⌜Φ p⌝ → ■ p) ⊢ ■ sForall Φ := by
   apply entails_preorder.trans _ (mono sForall_adequate)
@@ -802,13 +810,13 @@ theorem plainly_sForall_2 {Φ : aProp FF → Prop} :
   apply plainly_upred.2
   apply sForall_elim
   exists a; simp []
+  cases a with | FProp a
+  apply (Entails_UPredEntails _ _).1
+  simp [BI.imp, aProp.imp, AProp.to_IProp, BI.pure, aProp.pure, AProp.pure, plainly, aProp.plainly, AProp.plainly]
+  unfold AProp.imp; simp [Fml.sem]
   constructor
-  · sorry
-  · apply Entail_UPredEntail.1
-    cases a with | FProp a
-    simp [BI.imp, aProp.imp, AProp.to_IProp, BI.pure, aProp.pure, AProp.pure, plainly, aProp.plainly, AProp.plainly]
-    unfold AProp.imp; simp [Fml.sem]
-    iintro H %HΦ; istop; apply Iris.BIPlainly.mono
+  · apply plainly_imp_pure
+  · iintro H %HΦ; istop; apply Iris.BIPlainly.mono
     apply pure_imp HΦ Iris.BI.entails_preorder.refl
 
 noncomputable instance : BIPlainly (aProp FF) where
