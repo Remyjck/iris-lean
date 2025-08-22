@@ -24,11 +24,13 @@ instance : Iris.OFE.{u + 1} (aProp FF) where
 
 instance : Iris.IsCOFE.{u + 1} (aProp.{u} FF) where
   compl := fun c => by
-    have ic' : Iris.Chain (Iris.IProp FF) := ⟨ fun n => (c n).to_IProp, c.cauchy ⟩
-    have fc' : Iris.Chain (Fml.{u} FF) := ⟨ fun n => (c n).to_Formula, sorry ⟩
-    refine (AProp.FProp (COFEUPred.compl ic') (Fml.instIsCOFE.compl fc') ?_)
+
+
+    -- have ic' : Iris.Chain (Iris.IProp FF) := ⟨ fun n => (c n).to_IProp, c.cauchy ⟩
+    -- have fc' : Iris.Chain (Fml.{u} FF) := ⟨ fun n => (c n).to_Formula, sorry ⟩
+    -- refine (AProp.FProp (COFEUPred.compl ic') (Fml.instIsCOFE.compl fc') ?_)
     sorry
-  conv_compl {n c} := by apply COFEUPred.conv_compl
+  conv_compl {n c} := sorry
 
 namespace aProp
 
@@ -693,29 +695,50 @@ theorem persistently_sExists_1 {Ψ : aProp FF → Prop} :
   · apply entails_preorder.trans persistently_and.1
     apply and_intro; apply and_elim_l; apply and_elim_r
 
-theorem false_conv : (iprop(False) : Iris.IProp FF) = AProp.to_IProp (AProp.pure (False)) := rfl
+theorem false_conv.{u} : (iprop(False) : Iris.IProp FF) = AProp.to_IProp.{u} (AProp.pure.{u} (False)) := rfl
 
 theorem later_conv (P : Iris.IProp FF) : later P = AProp.to_IProp (AProp.FProp fml(▷ P)) := rfl
 
-theorem later_sExists_false {Φ : aProp FF → Prop} :
+theorem to_IProp_or {P Q : AProp FF b} : AProp.to_IProp (AProp.or P Q) = iprop((AProp.to_IProp P) ∨ (AProp.to_IProp Q)) :=
+  by cases P <;> cases Q <;> rfl
+
+theorem later_and_false_pure {φ : Prop} {a : Iris.IProp FF} : ▷ (⌜φ⌝ ∧ a) ⊢ iprop((later iprop(False)) ∨ (⌜φ⌝ ∧ later a)) :=
+  fun
+  | 0, _, _, H => by simp [BI.and, UPred.and, later, UPred.later, BI.pure, UPred.pure, BI.or, UPred.or] at H |-
+  | n+1, x, Hx, H =>
+    by
+      simp [BI.and, UPred.and, later, UPred.later, BI.pure, UPred.pure, BI.or, UPred.or] at H |-
+      exact H
+
+theorem later_sExists_false.{u} {Φ : aProp.{u + 1} FF → Prop} :
   later (sExists Φ) ⊢ later iprop(False) ∨ ∃ p, ⌜Φ p⌝ ∧ later p := by
   apply entails_preorder.trans (later_mono sExists_adequate')
   apply upred_later.1
   apply Iris.BI.entails_trans.trans (Iris.BI.later_mono to_iprop_exists)
   apply Iris.BI.entails_trans.trans Iris.BI.later_sExists_false
-  iintro ⟨Hf | Ha⟩ <;> istop
-  · rewrite [false_conv]; apply upred_later.2; apply or_intro_l
-  · iintro ⟨P, ⟨⟨a, %Ha⟩, H⟩⟩; istop; rewrite [later_conv]; apply Entail_UPredEntail.2; apply entails_preorder.trans _ or_intro_r
+  iintro ⟨Hf | Ha⟩
+  · rewrite [false_conv.{u + 1}]; apply upred_later.2; apply or_intro_l
+  · icases Ha with ⟨P, ⟨⟨a, %Ha⟩, Hp⟩⟩; istop
+    rewrite [later_conv.{u + 1}]; apply Entail_UPredEntail.2
     simp [] at Ha
     cases a with | FProp a
     simp [AProp.to_IProp, BI.and, aProp.and, BI.pure, aProp.pure, AProp.pure] at Ha
     unfold AProp.and at Ha; simp [Fml.sem] at Ha
-    apply upred_exists
-    iintro H; iexists (AProp.FProp a); istop
-    simp [AProp.to_IProp, BI.and, aProp.and, later, aProp.later, AProp.later, BI.pure, aProp.pure, AProp.pure]
-    unfold AProp.and; simp [Fml.sem]
+    apply Entail_UPredEntail.1
+    conv => lhs; simp [AProp.to_IProp, Fml.sem]
+    conv => rhs; simp [BI.or, aProp.or]; rewrite [to_IProp_or];
+            lhs; simp [later, aProp.later, AProp.later, BI.pure, aProp.pure, AProp.pure, AProp.to_IProp]
+    simp [Fml.sem]
     apply Iris.BI.entails_preorder.trans (Iris.BI.later_mono Ha.2)
-    sorry
+    apply later_and_false_pure.trans
+    apply Iris.BI.or_mono_r
+    iintro ⟨%HΦ, Ha⟩; istop
+    rewrite [later_conv]
+    apply upred_exists
+    iintro Ha; iexists (AProp.FProp a)
+    simp [AProp.to_IProp, BI.and, aProp.and, later, aProp.later, AProp.later, BI.pure, aProp.pure, AProp.pure]
+    unfold AProp.and; simp [Fml.sem]; istop
+    apply Iris.BI.and_intro (Iris.BI.pure_intro HΦ) (Iris.BI.entails_preorder.refl)
 
 noncomputable instance : BI.{u+2} (aProp.{u+1} FF) where
   entails_preorder := entails_preorder
